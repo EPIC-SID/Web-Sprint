@@ -20,7 +20,13 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { Club } from '../types';
-import { fetchCommunities } from '../lib/api';
+import {
+  fetchCommunities,
+  fetchPosts,
+  createPost,
+  toggleLikePost,
+  createComment,
+} from '../lib/api';
 import { MOCK_COMMUNITIES } from '../data/mockData';
 
 // Sub-pages
@@ -155,7 +161,8 @@ const INITIAL_POSTS: FeedPost[] = [
 
 export const HomeFeed: React.FC<HomeFeedProps> = ({
   currentUser,
-  darkMode,
+  onSignOut,
+  darkMode = true,
   onToggleTheme,
 }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
@@ -173,47 +180,97 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     fetchCommunities().then((clubs) => {
       if (clubs && clubs.length > 0) setCommunities(clubs);
     });
-  }, []);
 
-  const handleToggleLike = (postId: string) => {
+    fetchPosts(currentUser.id).then((livePosts) => {
+      if (livePosts && livePosts.length > 0) {
+        setPosts(
+          livePosts.map((p) => ({
+            id: p.id,
+            author: {
+              name: p.author.name,
+              handle: `@${p.author.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+              initials: (p.author.name || 'S')[0].toUpperCase(),
+              avatar: p.author.avatar,
+              avatarColor: 'bg-indigo-600',
+            },
+            date: p.timestamp,
+            content: p.content,
+            linkCard: p.mediaUrl
+              ? {
+                  url: p.mediaUrl,
+                  domain: p.mediaUrl.includes('drive.google.com')
+                    ? 'drive.google.com'
+                    : 'cohortpccoe.in',
+                }
+              : undefined,
+            likes: p.likesCount,
+            isLiked: p.isLiked,
+            replies: (p.replies || []).map((r) => ({
+              id: r.id,
+              author: {
+                name: r.author.name,
+                handle: `@${r.author.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+                initials: (r.author.name || 'S')[0].toUpperCase(),
+                avatarColor: 'bg-emerald-600',
+              },
+              content: r.content,
+              date: r.timestamp,
+            })),
+          }))
+        );
+      }
+    });
+  }, [currentUser.id]);
+
+  const handleToggleLike = async (postId: string) => {
+    const target = posts.find((p) => p.id === postId);
+    if (!target) return;
+    const isCurrentlyLiked = Boolean(target.isLiked);
+
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
-          const isLiked = !p.isLiked;
           return {
             ...p,
-            isLiked,
-            likes: isLiked ? p.likes + 1 : p.likes - 1,
+            isLiked: !isCurrentlyLiked,
+            likes: !isCurrentlyLiked ? p.likes + 1 : Math.max(0, p.likes - 1),
           };
         }
         return p;
       })
     );
+
+    if (currentUser.id) {
+      try {
+        await toggleLikePost(postId, currentUser.id, isCurrentlyLiked);
+      } catch (err) {
+        console.warn('Like toggle error:', err);
+      }
+    }
   };
 
-  const handleAddReply = (postId: string) => {
+  const handleAddReply = async (postId: string) => {
     const text = replyInputs[postId];
     if (!text || !text.trim()) return;
+
+    const newReply = {
+      id: `r_${Date.now()}`,
+      author: {
+        name: currentUser.name || 'Student',
+        handle: `@${(currentUser.name || 'student').toLowerCase().replace(/\s/g, '')}`,
+        initials: (currentUser.name || 'S')[0].toUpperCase(),
+        avatarColor: 'bg-indigo-600',
+      },
+      content: text.trim(),
+      date: 'Just now',
+    };
 
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
           return {
             ...p,
-            replies: [
-              ...p.replies,
-              {
-                id: `r_${Date.now()}`,
-                author: {
-                  name: currentUser.name || 'Student',
-                  handle: `@${(currentUser.name || 'student').toLowerCase().replace(/\s/g, '')}`,
-                  initials: (currentUser.name || 'S')[0],
-                  avatarColor: 'bg-indigo-600',
-                },
-                content: text.trim(),
-                date: 'Just now',
-              },
-            ],
+            replies: [...p.replies, newReply],
           };
         }
         return p;
@@ -222,27 +279,45 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
     setReplyInputs((prev) => ({ ...prev, [postId]: '' }));
     setOpenReplies((prev) => ({ ...prev, [postId]: true }));
+
+    if (currentUser.id) {
+      try {
+        await createComment(postId, currentUser.id, text.trim());
+      } catch (err) {
+        console.warn('Create comment error:', err);
+      }
+    }
   };
 
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!newPostText.trim()) return;
 
+    const contentToPost = newPostText.trim();
     const newP: FeedPost = {
       id: `p_${Date.now()}`,
       author: {
         name: currentUser.name || 'Siddhant Verma',
         handle: `@${(currentUser.name || 'siddhant').toLowerCase().replace(/\s/g, '')}`,
-        initials: (currentUser.name || 'S')[0],
+        initials: (currentUser.name || 'S')[0].toUpperCase(),
+        avatar: currentUser.avatar,
         avatarColor: 'bg-indigo-600',
       },
       date: 'Just now',
-      content: newPostText.trim(),
+      content: contentToPost,
       likes: 0,
       replies: [],
     };
 
     setPosts([newP, ...posts]);
     setNewPostText('');
+
+    if (currentUser.id) {
+      try {
+        await createPost(currentUser.id, contentToPost, 'Announcement', ['Cohort', 'PCCOE']);
+      } catch (err) {
+        console.warn('Create post error:', err);
+      }
+    }
   };
 
   const navItems: { id: ActiveTab; icon: any; label: string; badge?: string }[] = [
@@ -259,40 +334,52 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
     { id: 'profile', icon: User, label: 'Profile' },
   ];
 
+  const spiderPrefix = darkMode ? '/assets/dark' : '/assets/light';
+
   return (
-    <div className="min-h-screen bg-[#050507] text-[#e4e4e7] flex relative font-sans selection:bg-[#2dd4bf] selection:text-black">
+    <div
+      className={`min-h-screen flex relative font-sans transition-colors duration-300 ${
+        darkMode
+          ? 'bg-[#050507] text-[#e4e4e7] selection:bg-[#2dd4bf] selection:text-black'
+          : 'bg-[#fafafa] text-[#0f172a] selection:bg-[#2dd4bf] selection:text-black'
+      }`}
+    >
       {/* Background Geometric Doodle Grid */}
       <div
-        className="fixed inset-0 pointer-events-none opacity-[0.04] z-0"
+        className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-300 ${
+          darkMode ? 'opacity-[0.04]' : 'opacity-[0.035]'
+        }`}
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15 15h10v10H15z M45 20l5-10 5 10z M80 15a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M15 50l10 10-10 10z M50 50h10v10H50z M85 55l-5 10h10z M15 90a5 5 0 1 0 10 0 5 5 0 0 0-10 0z M50 90h10v10H50z M85 85l5 10 5-10z M105 15h10v10h-10z M105 50h10v10h-10z M105 85h10v10h-10z' stroke='%23ffffff' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15 15h10v10H15z M45 20l5-10 5 10z M80 15a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M15 50l10 10-10 10z M50 50h10v10H50z M85 55l-5 10h10z M15 90a5 5 0 1 0 10 0 5 5 0 0 0-10 0z M50 90h10v10H50z M85 85l5 10 5-10z M105 15h10v10h-10z M105 50h10v10h-10z M105 85h10v10h-10z' stroke='${
+            darkMode ? '%23ffffff' : '%23000000'
+          }' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`,
           backgroundSize: '120px 120px',
         }}
       />
 
-      {/* Spider-Man Stickers */}
+      {/* Spider-Man Stickers (Dynamic Light vs Dark Assets) */}
       <img
-        src="/assets/dark1.svg"
+        src={`${spiderPrefix}1.svg`}
         alt=""
         className="fixed top-2 left-24 w-9 h-9 pointer-events-none z-30 opacity-90"
       />
       <img
-        src="/assets/dark5.png"
+        src={`${spiderPrefix}5.${darkMode ? 'png' : 'svg'}`}
         alt=""
         className="fixed bottom-24 left-10 w-10 h-10 pointer-events-none z-30 opacity-90 rotate-12"
       />
       <img
-        src="/assets/dark4.svg"
+        src={`${spiderPrefix}4.svg`}
         alt=""
         className="fixed top-3 right-64 w-8 h-8 pointer-events-none z-30 opacity-95"
       />
       <img
-        src="/assets/dark3.svg"
+        src={`${spiderPrefix}3.svg`}
         alt=""
         className="fixed top-80 right-2 w-9 h-9 pointer-events-none z-30 opacity-90"
       />
       <img
-        src="/assets/dark6.png"
+        src={`${spiderPrefix}6.${darkMode ? 'png' : 'svg'}`}
         alt=""
         className="fixed bottom-12 right-20 w-8 h-8 pointer-events-none z-30 opacity-90"
       />
@@ -303,9 +390,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       <aside
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
-        className={`shrink-0 h-screen sticky top-0 border-r border-white/[0.08] bg-[#07070a]/95 backdrop-blur-md flex flex-col py-4 z-40 transition-all duration-300 ease-in-out ${
-          isSidebarHovered ? 'w-60 px-3' : 'w-[68px] px-2 items-center'
-        }`}
+        className={`shrink-0 h-screen sticky top-0 border-r flex flex-col py-4 z-40 transition-all duration-300 ease-in-out ${
+          darkMode
+            ? 'border-white/[0.08] bg-[#07070a]/95 backdrop-blur-md'
+            : 'border-slate-200 bg-white/95 backdrop-blur-md shadow-sm'
+        } ${isSidebarHovered ? 'w-60 px-3' : 'w-[68px] px-2 items-center'}`}
       >
         {/* Logo */}
         <div
@@ -319,7 +408,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             className="w-7 h-7 rounded-lg shrink-0"
           />
           {isSidebarHovered && (
-            <span className="font-heading font-black text-xl tracking-tight text-white lowercase animate-[fadeIn_0.15s_ease-out]">
+            <span
+              className={`font-heading font-black text-xl tracking-tight lowercase animate-[fadeIn_0.15s_ease-out] ${
+                darkMode ? 'text-white' : 'text-slate-900'
+              }`}
+            >
               cohort
             </span>
           )}
@@ -344,14 +437,24 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                     : 'justify-center w-11 h-11 p-0'
                 } ${
                   isActive
-                    ? 'bg-[#2dd4bf] text-black shadow-lg shadow-[#2dd4bf]/20 font-bold'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                    ? darkMode
+                      ? 'bg-[#2dd4bf] text-black shadow-lg shadow-[#2dd4bf]/20 font-bold'
+                      : 'bg-[#2563eb] text-white shadow-lg shadow-blue-500/20 font-semibold'
+                    : darkMode
+                    ? 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <div className={`flex items-center ${isSidebarHovered ? 'gap-3' : 'justify-center'}`}>
                   <Icon
                     className={`w-5 h-5 shrink-0 ${
-                      isActive ? 'text-black stroke-[2.3]' : 'text-zinc-400'
+                      isActive
+                        ? darkMode
+                          ? 'text-black stroke-[2.3]'
+                          : 'text-white stroke-[2.3]'
+                        : darkMode
+                        ? 'text-zinc-400'
+                        : 'text-slate-500'
                     }`}
                   />
                   {isSidebarHovered && (
@@ -365,7 +468,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                     className={`inline-flex items-center justify-center text-[10px] font-black rounded-full ${
                       isSidebarHovered
                         ? 'w-4 h-4 bg-rose-500 text-white'
-                        : 'absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white ring-2 ring-[#07070a]'
+                        : darkMode
+                        ? 'absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white ring-2 ring-[#07070a]'
+                        : 'absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white ring-2 ring-white'
                     }`}
                   >
                     {badge}
@@ -378,9 +483,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
         {/* Bottom Wordmark & Theme Switch */}
         <div
-          className={`mt-auto pt-3 border-t border-white/[0.08] flex flex-col ${
-            isSidebarHovered ? 'w-full space-y-3' : 'items-center space-y-2'
-          }`}
+          className={`mt-auto pt-3 border-t flex flex-col ${
+            darkMode ? 'border-white/[0.08]' : 'border-slate-200'
+          } ${isSidebarHovered ? 'w-full space-y-3' : 'items-center space-y-2'}`}
         >
           {/* SPIDER-MAN Red Wordmark (Visible when expanded) */}
           {isSidebarHovered && (
@@ -393,8 +498,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           {onToggleTheme && (
             <button
               onClick={onToggleTheme}
-              title={!isSidebarHovered ? (darkMode ? 'Light mode' : 'Dark mode') : undefined}
-              className={`flex items-center rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-white/[0.05] transition cursor-pointer ${
+              title={darkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
+              className={`flex items-center rounded-xl text-xs transition cursor-pointer ${
+                darkMode
+                  ? 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              } ${
                 isSidebarHovered
                   ? 'gap-2.5 px-3 py-2 w-full justify-start'
                   : 'justify-center w-11 h-11'
@@ -402,13 +511,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             >
               {darkMode ? (
                 <>
-                  <Sun className="w-5 h-5 text-zinc-400 hover:text-amber-400 shrink-0" />
-                  {isSidebarHovered && <span>Light mode</span>}
+                  <Sun className="w-5 h-5 text-amber-400 shrink-0" />
+                  {isSidebarHovered && <span className="font-medium">Light mode</span>}
                 </>
               ) : (
                 <>
-                  <Moon className="w-5 h-5 text-zinc-400 hover:text-indigo-400 shrink-0" />
-                  {isSidebarHovered && <span>Dark mode</span>}
+                  <Moon className="w-5 h-5 text-indigo-500 shrink-0" />
+                  {isSidebarHovered && <span className="font-medium">Dark mode</span>}
                 </>
               )}
             </button>
@@ -419,34 +528,78 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       {/* ========================================================================= */}
       {/* CENTER STAGE */}
       {/* ========================================================================= */}
-      <main className="flex-1 min-w-0 max-w-2xl mx-auto px-6 py-5 z-10">
-        {/* Top Breadcrumb Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <h1 className="font-heading text-lg font-bold text-white tracking-tight">
-            c/{activeTab}
-          </h1>
-        </div>
+      <main
+        className={`flex-1 min-w-0 px-6 py-5 z-10 transition-all duration-300 ${
+          activeTab === 'home' ? 'max-w-2xl mx-auto' : 'max-w-5xl mx-auto'
+        }`}
+      >
+        {/* Top Header for Home tab only */}
+        {activeTab === 'home' && (
+          <div className="flex items-center gap-2 mb-6">
+            <h1
+              className={`font-heading text-lg font-bold tracking-tight ${
+                darkMode ? 'text-white' : 'text-slate-900'
+              }`}
+            >
+              c/home
+            </h1>
+          </div>
+        )}
 
         {/* Route Renderers */}
         {activeTab === 'home' && (
           <div className="space-y-6">
             {/* Post Composer Card */}
-            <div className="bg-[#0e0e13] border border-white/[0.08] rounded-2xl p-4 shadow-xl shadow-black/40">
+            <div
+              className={`border rounded-2xl p-4 shadow-xl transition-colors ${
+                darkMode
+                  ? 'bg-[#0e0e13] border-white/[0.08] shadow-black/40'
+                  : 'bg-white border-slate-200 shadow-slate-200/50'
+              }`}
+            >
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-black border border-white/20 flex items-center justify-center text-white text-xs font-black shrink-0">
-                  S
-                </div>
+                {currentUser.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 shrink-0"
+                  />
+                ) : (
+                  <div
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center text-xs font-black shrink-0 ${
+                      darkMode
+                        ? 'bg-black border-white/20 text-white'
+                        : 'bg-slate-900 border-slate-700 text-white'
+                    }`}
+                  >
+                    {(currentUser.name || 'S')[0].toUpperCase()}
+                  </div>
+                )}
                 <textarea
                   value={newPostText}
                   onChange={(e) => setNewPostText(e.target.value)}
                   placeholder="What's on your mind? Type @ to tag users or communities"
                   rows={2}
-                  className="flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 outline-none resize-none pt-1"
+                  className={`flex-1 bg-transparent text-xs outline-none resize-none pt-1 ${
+                    darkMode
+                      ? 'text-white placeholder:text-zinc-500'
+                      : 'text-slate-900 placeholder:text-slate-400'
+                  }`}
                 />
               </div>
 
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.06]">
-                <button className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition px-2 py-1 rounded-lg hover:bg-white/[0.05] cursor-pointer">
+              <div
+                className={`flex items-center justify-between mt-3 pt-3 border-t ${
+                  darkMode ? 'border-white/[0.06]' : 'border-slate-100'
+                }`}
+              >
+                <button
+                  className={`flex items-center gap-1.5 text-xs transition px-2 py-1 rounded-lg cursor-pointer ${
+                    darkMode
+                      ? 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
                   <Paperclip className="w-3.5 h-3.5" />
                   <span>Attach</span>
                 </button>
@@ -454,7 +607,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setNewPostText('')}
-                    className="px-3 py-1.5 text-xs rounded-lg text-zinc-400 hover:text-white transition cursor-pointer"
+                    className={`px-3 py-1.5 text-xs rounded-lg transition cursor-pointer ${
+                      darkMode
+                        ? 'text-zinc-400 hover:text-white'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
                   >
                     Cancel
                   </button>
@@ -464,7 +621,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                     className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                       newPostText.trim()
                         ? 'bg-[#3b82f6] text-white hover:bg-blue-600'
-                        : 'bg-[#1f2937] text-zinc-500 cursor-not-allowed'
+                        : darkMode
+                        ? 'bg-[#1f2937] text-zinc-500 cursor-not-allowed'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     }`}
                   >
                     <Send className="w-3 h-3" />
@@ -481,7 +640,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                 return (
                   <div
                     key={post.id}
-                    className="bg-[#0e0e13] border border-white/[0.08] rounded-2xl p-4 shadow-xl shadow-black/30"
+                    className={`border rounded-2xl p-4 shadow-xl transition-colors ${
+                      darkMode
+                        ? 'bg-[#0e0e13] border-white/[0.08] shadow-black/30'
+                        : 'bg-white border-slate-200 shadow-slate-200/50'
+                    }`}
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -501,9 +664,27 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                         )}
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-white">{post.author.name}</span>
-                            <span className="text-[11px] text-zinc-400">{post.author.handle}</span>
-                            <span className="text-[11px] text-zinc-500">• {post.date}</span>
+                            <span
+                              className={`text-xs font-bold ${
+                                darkMode ? 'text-white' : 'text-slate-900'
+                              }`}
+                            >
+                              {post.author.name}
+                            </span>
+                            <span
+                              className={`text-[11px] ${
+                                darkMode ? 'text-zinc-400' : 'text-slate-500'
+                              }`}
+                            >
+                              {post.author.handle}
+                            </span>
+                            <span
+                              className={`text-[11px] ${
+                                darkMode ? 'text-zinc-500' : 'text-slate-400'
+                              }`}
+                            >
+                              • {post.date}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -514,7 +695,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition cursor-pointer ${
                           post.isLiked
                             ? 'bg-rose-500/10 border-rose-500/40 text-rose-500'
-                            : 'bg-white/[0.03] border-white/[0.08] text-zinc-400 hover:text-white'
+                            : darkMode
+                            ? 'bg-white/[0.03] border-white/[0.08] text-zinc-400 hover:text-white'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-950'
                         }`}
                       >
                         <Heart
@@ -525,7 +708,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                     </div>
 
                     {/* Content */}
-                    <div className="text-xs text-zinc-200 leading-relaxed whitespace-pre-line mb-3">
+                    <div
+                      className={`text-xs leading-relaxed whitespace-pre-line mb-3 ${
+                        darkMode ? 'text-zinc-200' : 'text-slate-800'
+                      }`}
+                    >
                       {post.content}
                     </div>
 
@@ -535,16 +722,26 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                         href={post.linkCard.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-3 p-2.5 mb-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] transition group"
+                        className={`flex items-center gap-3 p-2.5 mb-3 rounded-xl border transition group ${
+                          darkMode
+                            ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06]'
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}
                       >
                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
                           <ExternalLink className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-xs text-blue-400 font-medium truncate group-hover:underline">
+                          <div className="text-xs text-blue-500 font-medium truncate group-hover:underline">
                             {post.linkCard.url}
                           </div>
-                          <div className="text-[10px] text-zinc-500">{post.linkCard.domain}</div>
+                          <div
+                            className={`text-[10px] ${
+                              darkMode ? 'text-zinc-500' : 'text-slate-400'
+                            }`}
+                          >
+                            {post.linkCard.domain}
+                          </div>
                         </div>
                       </a>
                     )}
@@ -554,7 +751,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                       onClick={() =>
                         setOpenReplies((prev) => ({ ...prev, [post.id]: !prev[post.id] }))
                       }
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1e293b]/70 hover:bg-[#1e293b] text-blue-400 text-[11px] font-semibold transition cursor-pointer mb-3 border border-blue-500/20"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold transition cursor-pointer mb-3 border ${
+                        darkMode
+                          ? 'bg-[#1e293b]/70 hover:bg-[#1e293b] text-blue-400 border-blue-500/20'
+                          : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200'
+                      }`}
                     >
                       <MessageSquare className="w-3 h-3" />
                       <span>{post.replies.length} Reply</span>
@@ -562,7 +763,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
                     {/* Reply List */}
                     {isRepliesOpen && post.replies.length > 0 && (
-                      <div className="space-y-2.5 pt-2 border-t border-white/[0.06] mb-3">
+                      <div
+                        className={`space-y-2.5 pt-2 border-t mb-3 ${
+                          darkMode ? 'border-white/[0.06]' : 'border-slate-100'
+                        }`}
+                      >
                         {post.replies.map((r) => (
                           <div key={r.id} className="flex items-start gap-2.5">
                             <div
@@ -570,15 +775,43 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                             >
                               {r.author.initials}
                             </div>
-                            <div className="flex-1 bg-white/[0.03] rounded-xl px-3 py-2 border border-white/[0.06]">
+                            <div
+                              className={`flex-1 rounded-xl px-3 py-2 border ${
+                                darkMode
+                                  ? 'bg-white/[0.03] border-white/[0.06]'
+                                  : 'bg-slate-50 border-slate-200'
+                              }`}
+                            >
                               <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[11px] font-bold text-white">
+                                <span
+                                  className={`text-[11px] font-bold ${
+                                    darkMode ? 'text-white' : 'text-slate-900'
+                                  }`}
+                                >
                                   {r.author.name}
                                 </span>
-                                <span className="text-[10px] text-zinc-500">{r.author.handle}</span>
+                                <span
+                                  className={`text-[10px] ${
+                                    darkMode ? 'text-zinc-500' : 'text-slate-400'
+                                  }`}
+                                >
+                                  {r.author.handle}
+                                </span>
                               </div>
-                              <p className="text-xs text-zinc-300">{r.content}</p>
-                              <span className="text-[9px] text-zinc-500 block mt-1">{r.date}</span>
+                              <p
+                                className={`text-xs ${
+                                  darkMode ? 'text-zinc-300' : 'text-slate-700'
+                                }`}
+                              >
+                                {r.content}
+                              </p>
+                              <span
+                                className={`text-[9px] block mt-1 ${
+                                  darkMode ? 'text-zinc-500' : 'text-slate-400'
+                                }`}
+                              >
+                                {r.date}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -586,11 +819,35 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                     )}
 
                     {/* Reply Input Box */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-white/[0.06]">
-                      <div className="w-6 h-6 rounded-full bg-black border border-white/20 flex items-center justify-center text-white text-[10px] font-black shrink-0">
-                        S
-                      </div>
-                      <div className="flex-1 flex items-center gap-2 bg-white/[0.03] rounded-xl px-3 py-1.5 border border-white/[0.08]">
+                    <div
+                      className={`flex items-center gap-2 pt-2 border-t ${
+                        darkMode ? 'border-white/[0.06]' : 'border-slate-100'
+                      }`}
+                    >
+                      {currentUser.avatar ? (
+                        <img
+                          src={currentUser.avatar}
+                          alt=""
+                          className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-black shrink-0 ${
+                            darkMode
+                              ? 'bg-black border-white/20 text-white'
+                              : 'bg-slate-900 border-slate-700 text-white'
+                          }`}
+                        >
+                          {(currentUser.name || 'S')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div
+                        className={`flex-1 flex items-center gap-2 rounded-xl px-3 py-1.5 border ${
+                          darkMode
+                            ? 'bg-white/[0.03] border-white/[0.08]'
+                            : 'bg-slate-50 border-slate-200'
+                        }`}
+                      >
                         <input
                           type="text"
                           value={replyInputs[post.id] || ''}
@@ -599,11 +856,19 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                           }
                           onKeyDown={(e) => e.key === 'Enter' && handleAddReply(post.id)}
                           placeholder="Write a reply... Type @ to tag someone"
-                          className="flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 outline-none"
+                          className={`flex-1 bg-transparent text-xs outline-none ${
+                            darkMode
+                              ? 'text-white placeholder:text-zinc-500'
+                              : 'text-slate-900 placeholder:text-slate-400'
+                          }`}
                         />
                         <button
                           onClick={() => handleAddReply(post.id)}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-blue-400 transition cursor-pointer"
+                          className={`p-1 rounded-lg transition cursor-pointer ${
+                            darkMode
+                              ? 'text-zinc-400 hover:text-blue-400'
+                              : 'text-slate-500 hover:text-blue-600'
+                          }`}
                         >
                           <Send className="w-3 h-3" />
                         </button>
@@ -617,33 +882,73 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         )}
 
         {/* Sub-Pages Renderers */}
-        {activeTab === 'communities' && <CommunitiesPage communities={communities} />}
-        {activeTab === 'friends' && <FriendsPage currentUserId={currentUser.id} />}
-        {activeTab === 'connect' && (
-          <ConnectPage currentUserId={currentUser.id} currentUser={currentUser} />
+        {activeTab === 'communities' && (
+          <CommunitiesPage communities={communities} darkMode={darkMode} />
         )}
-        {activeTab === 'xd' && <XDPage />}
+        {activeTab === 'friends' && (
+          <FriendsPage currentUserId={currentUser.id} darkMode={darkMode} />
+        )}
+        {activeTab === 'connect' && (
+          <ConnectPage
+            currentUserId={currentUser.id}
+            currentUser={currentUser}
+            darkMode={darkMode}
+          />
+        )}
+        {activeTab === 'xd' && <XDPage darkMode={darkMode} />}
         {activeTab === 'map' && <MapPage />}
-        {activeTab === 'calendar' && <CalendarPage />}
-        {activeTab === 'arcade' && <ArcadePage />}
-        {activeTab === 'headsup' && <HeadsUpPage />}
-        {activeTab === 'contact' && <ContactUsPage />}
-        {activeTab === 'profile' && <ProfilePage currentUser={currentUser} />}
+        {activeTab === 'calendar' && <CalendarPage darkMode={darkMode} />}
+        {activeTab === 'arcade' && <ArcadePage darkMode={darkMode} />}
+        {activeTab === 'headsup' && <HeadsUpPage darkMode={darkMode} />}
+        {activeTab === 'contact' && <ContactUsPage darkMode={darkMode} />}
+        {activeTab === 'profile' && (
+          <ProfilePage
+            currentUser={currentUser}
+            darkMode={darkMode}
+            onSignOut={onSignOut}
+          />
+        )}
       </main>
 
       {/* ========================================================================= */}
       {/* RIGHT SIDEBAR */}
       {/* ========================================================================= */}
-      <aside className="w-72 shrink-0 h-screen sticky top-0 border-l border-white/[0.08] bg-[#07070a]/90 backdrop-blur-md py-5 px-4 overflow-y-auto gap-5 flex flex-col z-20 text-xs">
+      <aside
+        className={`w-72 shrink-0 h-screen sticky top-0 border-l py-5 px-4 overflow-y-auto gap-5 flex flex-col z-20 text-xs transition-colors duration-300 ${
+          darkMode
+            ? 'border-white/[0.08] bg-[#07070a]/90 backdrop-blur-md'
+            : 'border-slate-200 bg-white/90 backdrop-blur-md'
+        }`}
+      >
         {/* Search */}
-        <div className="flex items-center gap-2 bg-[#121217] rounded-xl px-3 py-2 border border-white/[0.08]">
-          <Search className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+        <div
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 border ${
+            darkMode
+              ? 'bg-[#121217] border-white/[0.08]'
+              : 'bg-slate-100 border-slate-200'
+          }`}
+        >
+          <Search
+            className={`w-3.5 h-3.5 shrink-0 ${
+              darkMode ? 'text-zinc-400' : 'text-slate-500'
+            }`}
+          />
           <input
             type="text"
             placeholder="Search cohort..."
-            className="flex-1 bg-transparent text-xs text-white placeholder:text-zinc-500 outline-none"
+            className={`flex-1 bg-transparent text-xs outline-none ${
+              darkMode
+                ? 'text-white placeholder:text-zinc-500'
+                : 'text-slate-900 placeholder:text-slate-400'
+            }`}
           />
-          <span className="text-[10px] text-zinc-400 bg-white/[0.05] px-1.5 py-0.5 rounded border border-white/[0.08]">
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded border ${
+              darkMode
+                ? 'text-zinc-400 bg-white/[0.05] border-white/[0.08]'
+                : 'text-slate-500 bg-white border-slate-200'
+            }`}
+          >
             ⌘K
           </span>
         </div>
@@ -651,12 +956,18 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         {/* C/COMMUNITIES */}
         <section>
           <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+            <h3
+              className={`text-[11px] font-bold uppercase tracking-wider ${
+                darkMode ? 'text-zinc-400' : 'text-slate-500'
+              }`}
+            >
               C/COMMUNITIES
             </h3>
             <button
               onClick={() => setActiveTab('communities')}
-              className="text-zinc-500 hover:text-white transition cursor-pointer"
+              className={`transition cursor-pointer ${
+                darkMode ? 'text-zinc-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'
+              }`}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -670,7 +981,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               <div
                 key={i}
                 onClick={() => setActiveTab('communities')}
-                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-white/[0.04] transition cursor-pointer group"
+                className={`flex items-center gap-2.5 p-1.5 rounded-xl transition cursor-pointer group ${
+                  darkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-100'
+                }`}
               >
                 <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
                   <img
@@ -683,7 +996,13 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="text-xs text-zinc-300 group-hover:text-white transition truncate">
+                <span
+                  className={`text-xs transition truncate ${
+                    darkMode
+                      ? 'text-zinc-300 group-hover:text-white'
+                      : 'text-slate-700 group-hover:text-slate-950 font-medium'
+                  }`}
+                >
                   {name}
                 </span>
               </div>
@@ -694,12 +1013,18 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         {/* C/FRIENDS */}
         <section>
           <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+            <h3
+              className={`text-[11px] font-bold uppercase tracking-wider ${
+                darkMode ? 'text-zinc-400' : 'text-slate-500'
+              }`}
+            >
               C/FRIENDS
             </h3>
             <button
               onClick={() => setActiveTab('friends')}
-              className="text-zinc-500 hover:text-white transition cursor-pointer"
+              className={`transition cursor-pointer ${
+                darkMode ? 'text-zinc-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'
+              }`}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -713,7 +1038,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               <div
                 key={i}
                 onClick={() => setActiveTab('friends')}
-                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-white/[0.04] transition cursor-pointer group"
+                className={`flex items-center gap-2.5 p-1.5 rounded-xl transition cursor-pointer group ${
+                  darkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-100'
+                }`}
               >
                 <div
                   className={`w-6 h-6 rounded-full ${f.color} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}
@@ -721,10 +1048,22 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   {f.init}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-zinc-200 group-hover:text-white transition truncate">
+                  <div
+                    className={`text-xs font-semibold transition truncate ${
+                      darkMode
+                        ? 'text-zinc-200 group-hover:text-white'
+                        : 'text-slate-800 group-hover:text-slate-950'
+                    }`}
+                  >
                     {f.name}
                   </div>
-                  <div className="text-[10px] text-zinc-500 truncate">{f.user}</div>
+                  <div
+                    className={`text-[10px] truncate ${
+                      darkMode ? 'text-zinc-500' : 'text-slate-400'
+                    }`}
+                  >
+                    {f.user}
+                  </div>
                 </div>
               </div>
             ))}
@@ -734,12 +1073,18 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         {/* C/CONNECT */}
         <section>
           <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+            <h3
+              className={`text-[11px] font-bold uppercase tracking-wider ${
+                darkMode ? 'text-zinc-400' : 'text-slate-500'
+              }`}
+            >
               C/CONNECT
             </h3>
             <button
               onClick={() => setActiveTab('connect')}
-              className="text-zinc-500 hover:text-white transition cursor-pointer"
+              className={`transition cursor-pointer ${
+                darkMode ? 'text-zinc-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'
+              }`}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -753,7 +1098,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               <div
                 key={i}
                 onClick={() => setActiveTab('connect')}
-                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-white/[0.04] transition cursor-pointer group"
+                className={`flex items-center gap-2.5 p-1.5 rounded-xl transition cursor-pointer group ${
+                  darkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-100'
+                }`}
               >
                 <div
                   className={`w-6 h-6 rounded-full ${f.color} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}
@@ -761,10 +1108,22 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   {f.init}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-zinc-200 group-hover:text-white transition truncate">
+                  <div
+                    className={`text-xs font-semibold transition truncate ${
+                      darkMode
+                        ? 'text-zinc-200 group-hover:text-white'
+                        : 'text-slate-800 group-hover:text-slate-950'
+                    }`}
+                  >
                     {f.name}
                   </div>
-                  <div className="text-[10px] text-zinc-500 truncate">{f.user}</div>
+                  <div
+                    className={`text-[10px] truncate ${
+                      darkMode ? 'text-zinc-500' : 'text-slate-400'
+                    }`}
+                  >
+                    {f.user}
+                  </div>
                 </div>
               </div>
             ))}
@@ -774,38 +1133,64 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         {/* C/CALENDAR */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+            <h3
+              className={`text-[11px] font-bold uppercase tracking-wider ${
+                darkMode ? 'text-zinc-400' : 'text-slate-500'
+              }`}
+            >
               C/CALENDAR
             </h3>
             <button
               onClick={() => setActiveTab('calendar')}
-              className="text-zinc-500 hover:text-white transition cursor-pointer"
+              className={`transition cursor-pointer ${
+                darkMode ? 'text-zinc-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'
+              }`}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="text-[11px] text-zinc-500 px-1">No upcoming events</div>
+          <div
+            className={`text-[11px] px-1 ${
+              darkMode ? 'text-zinc-500' : 'text-slate-400'
+            }`}
+          >
+            No upcoming events
+          </div>
         </section>
 
         {/* C/HEADSUP */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+            <h3
+              className={`text-[11px] font-bold uppercase tracking-wider ${
+                darkMode ? 'text-zinc-400' : 'text-slate-500'
+              }`}
+            >
               C/HEADSUP
             </h3>
             <button
               onClick={() => setActiveTab('headsup')}
-              className="text-zinc-500 hover:text-white transition cursor-pointer"
+              className={`transition cursor-pointer ${
+                darkMode ? 'text-zinc-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'
+              }`}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
           <div
             onClick={() => setActiveTab('headsup')}
-            className="p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20 cursor-pointer hover:bg-amber-500/10 transition"
+            className={`p-2.5 rounded-xl border cursor-pointer transition ${
+              darkMode
+                ? 'bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10'
+                : 'bg-amber-50 border-amber-200 hover:bg-amber-100/70'
+            }`}
           >
-            <div className="text-[10px] font-bold text-amber-400 uppercase mb-0.5">Important</div>
-            <p className="text-[11px] text-zinc-300 leading-relaxed">
+            <div className="text-[10px] font-bold text-amber-500 uppercase mb-0.5">Important</div>
+            <p
+              className={`text-[11px] leading-relaxed ${
+                darkMode ? 'text-zinc-300' : 'text-amber-950'
+              }`}
+            >
               Full access will soon require PCCOE account login
             </p>
           </div>
@@ -815,7 +1200,11 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
       {/* Floating Messenger Icon */}
       <button
         onClick={() => setActiveTab('connect')}
-        className="fixed bottom-6 right-6 p-3 rounded-full bg-black text-white shadow-2xl shadow-purple-500/30 hover:scale-110 transition cursor-pointer z-30 flex items-center justify-center ring-2 ring-indigo-500/60"
+        className={`fixed bottom-6 right-6 p-3 rounded-full shadow-2xl hover:scale-110 transition cursor-pointer z-30 flex items-center justify-center ring-2 ${
+          darkMode
+            ? 'bg-black text-white shadow-purple-500/30 ring-indigo-500/60'
+            : 'bg-slate-900 text-white shadow-slate-900/30 ring-indigo-500/40'
+        }`}
         title="Open Campus Chat"
       >
         <MessageSquare className="w-5 h-5 text-indigo-400" />

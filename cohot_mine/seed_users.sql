@@ -1,27 +1,32 @@
 -- ==============================================================================
--- COHORT PCCOE - SEED STUDENTS & REAL BACKEND FOR FRIENDS & CONNECT
+-- COHORT PCCOE - MASTER SEED & COMPLETE LIVE DATABASE SCRIPT (IDEMPOTENT)
 -- ==============================================================================
--- Run this script in your Supabase SQL Editor to:
--- 1. Relax profiles insert policy for student directory seeding
--- 2. Insert 8 verified PCCOE students across departments
--- 3. Create connections table for 1-click student networking
--- 4. Create connect_requests table for hackathon & project teammate finder
+-- Run this in your Supabase SQL Editor:
 
--- 1. Allow profile insertion for student directory
+-- 1. Enable insert policies for anonymous/frontend interactions
 DROP POLICY IF EXISTS "Allow profile insert" ON public.profiles;
 CREATE POLICY "Allow profile insert" ON public.profiles FOR INSERT WITH CHECK (true);
 
--- 2. Drop foreign key constraint on profiles.id if strictly required for seeded peers
+DROP POLICY IF EXISTS "Allow posts insert" ON public.posts;
+CREATE POLICY "Allow posts insert" ON public.posts FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow post_comments insert" ON public.post_comments;
+CREATE POLICY "Allow post_comments insert" ON public.post_comments FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow post_likes insert" ON public.post_likes;
+CREATE POLICY "Allow post_likes insert" ON public.post_likes FOR INSERT WITH CHECK (true);
+
+-- Drop foreign key constraint on profiles.id if strictly required for seeded peers
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
--- 3. Seed Students across PCCOE Departments
+-- 2. Seed Students across PCCOE Departments
 INSERT INTO public.profiles (id, email, name, avatar_url, branch, year, bio, skills, role, is_verified)
 VALUES
   (
     'a1b2c3d4-1111-4a5b-8c9d-0e1f2a3b4c01',
     'shravan.kolhe@pccoepune.org',
     'C157_Shravan Kolhe',
-    NULL,
+    'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
     'Computer Engineering',
     'TE',
     'Competitive programmer, ACM Core team, exploring Distributed Systems and Rust.',
@@ -45,7 +50,7 @@ VALUES
     'a1b2c3d4-3333-4a5b-8c9d-0e1f2a3b4c03',
     'arnav.telangi@pccoepune.org',
     'Arnav Telangi',
-    NULL,
+    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
     'AI & Data Science',
     'SE',
     'Deep Learning & NLP researcher, experimenting with LLM agents and PyTorch.',
@@ -76,42 +81,6 @@ VALUES
     ARRAY['Burp Suite', 'Ghidra', 'Wireshark', 'Python'],
     'student',
     true
-  ),
-  (
-    'a1b2c3d4-6666-4a5b-8c9d-0e1f2a3b4c06',
-    'aarav.sharma@pccoepune.org',
-    'Aarav Sharma',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
-    'AI & Data Science',
-    'BE',
-    'SIH 2024 Winner, building Edge-AI computer vision pipelines for campus automation.',
-    ARRAY['YOLOv8', 'OpenCV', 'FastAPI', 'React'],
-    'student',
-    true
-  ),
-  (
-    'a1b2c3d4-7777-4a5b-8c9d-0e1f2a3b4c07',
-    'riya.patel@pccoepune.org',
-    'Riya Patel',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    'Information Technology',
-    'TE',
-    'Full-stack developer & mobile app enthusiast, Google Solution Challenge participant.',
-    ARRAY['Flutter', 'Firebase', 'Node.js', 'PostgreSQL'],
-    'student',
-    true
-  ),
-  (
-    'a1b2c3d4-8888-4a5b-8c9d-0e1f2a3b4c08',
-    'rohit.deshmukh@pccoepune.org',
-    'Rohit Deshmukh',
-    NULL,
-    'Mechanical Engineering',
-    'TE',
-    'Team Kratos Racing (Formula Student), CAD/CAE designer and telemetry lead.',
-    ARRAY['SolidWorks', 'ANSYS', 'MATLAB', 'Telemetry'],
-    'student',
-    true
   )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
@@ -121,22 +90,61 @@ ON CONFLICT (id) DO UPDATE SET
   skills = EXCLUDED.skills,
   is_verified = true;
 
--- 4. CONNECTIONS / FRIENDSHIPS TABLE
+-- 3. Seed Initial Posts
+INSERT INTO public.posts (id, author_id, category, content, tags, media_url)
+VALUES
+  (
+    'f1b2c3d4-0001-4a5b-8c9d-0e1f2a3b4c01',
+    'a1b2c3d4-1111-4a5b-8c9d-0e1f2a3b4c01',
+    'Announcement',
+    'TOC solutions are up on Cohort 📖
+have a look whenever you want... panic studying before the exam is still an option 🤫',
+    ARRAY['TOC', 'Exams', 'Resources'],
+    'https://drive.google.com/drive/folders/1vK-5yOIEpuYwEnlvyUx_n_JXfj...'
+  ),
+  (
+    'f1b2c3d4-0002-4a5b-8c9d-0e1f2a3b4c02',
+    'a1b2c3d4-2222-4a5b-8c9d-0e1f2a3b4c02',
+    'Academic',
+    'Friendly announcement for those still "searching for resources" 🧐
+
+The DBMS full question bank answer key is now available on Cohort.
+So before asking "Does anyone have answers?" in every group chat, maybe check Cohort first 😎
+
+Here you go: https://drive.google.com/file/d/1uiy3jr-alX54_ZaWD34d8j0gOyW8ktQ u/view?usp=sharing',
+    ARRAY['DBMS', 'QuestionBank', 'ComputerEngg'],
+    NULL
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- 4. Seed Comments
+INSERT INTO public.post_comments (post_id, author_id, content)
+VALUES
+  ('f1b2c3d4-0001-4a5b-8c9d-0e1f2a3b4c01', 'a1b2c3d4-3333-4a5b-8c9d-0e1f2a3b4c03', 'Cohort goated ngl'),
+  ('f1b2c3d4-0002-4a5b-8c9d-0e1f2a3b4c02', 'a1b2c3d4-1111-4a5b-8c9d-0e1f2a3b4c01', 'Requesting one for TOC n MOT as well 🤌 y''all my only hope 🙏')
+ON CONFLICT DO NOTHING;
+
+-- 5. CONNECTIONS TABLE
 CREATE TABLE IF NOT EXISTS public.connections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   friend_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'accepted', -- 'pending', 'accepted'
+  status TEXT DEFAULT 'accepted',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, friend_id)
 );
 
 ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public connections select" ON public.connections;
 CREATE POLICY "Public connections select" ON public.connections FOR SELECT USING (true);
-CREATE POLICY "Users can create connections" ON public.connections FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can delete connections" ON public.connections FOR DELETE USING (true);
 
--- 5. CONNECT TEAMMATE REQUESTS TABLE
+DROP POLICY IF EXISTS "Public connections insert" ON public.connections;
+CREATE POLICY "Public connections insert" ON public.connections FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public connections delete" ON public.connections;
+CREATE POLICY "Public connections delete" ON public.connections FOR DELETE USING (true);
+
+-- 6. CONNECT TEAMMATE REQUESTS TABLE
 CREATE TABLE IF NOT EXISTS public.connect_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -151,14 +159,17 @@ CREATE TABLE IF NOT EXISTS public.connect_requests (
 );
 
 ALTER TABLE public.connect_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public connect_requests select" ON public.connect_requests;
 CREATE POLICY "Public connect_requests select" ON public.connect_requests FOR SELECT USING (true);
-CREATE POLICY "Users can insert connect_requests" ON public.connect_requests FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public connect_requests insert" ON public.connect_requests;
+CREATE POLICY "Public connect_requests insert" ON public.connect_requests FOR INSERT WITH CHECK (true);
 
 -- Seed initial Hackathon Connect requests
 INSERT INTO public.connect_requests (author_id, hackathon, title, description, required_skills, team_size, deadline)
 VALUES
   (
-    'a1b2c3d4-6666-4a5b-8c9d-0e1f2a3b4c06',
+    'a1b2c3d4-1111-4a5b-8c9d-0e1f2a3b4c01',
     'Smart India Hackathon (SIH 2026)',
     'AI-assisted Smart Grid Energy Optimizer',
     'Building an edge-AI optimization platform for decentralized micro-grids. Looking for 1 React frontend dev and 1 embedded specialist.',
@@ -174,13 +185,5 @@ VALUES
     ARRAY['Burp Suite', 'Ghidra', 'Cryptography', 'Python'],
     '2 / 4 Members',
     'CTF starts March 1st'
-  ),
-  (
-    'a1b2c3d4-7777-4a5b-8c9d-0e1f2a3b4c07',
-    'Google Solution Challenge 2026',
-    'Sustainable Campus Food Waste Redistribution App',
-    'Developing a Flutter + Firebase app connecting local college messes and canteens to NGOs in Pune to minimize food wastage.',
-    ARRAY['Flutter', 'Firebase', 'Figma', 'UI/UX'],
-    '3 / 4 Members',
-    'Submissions due April 10'
-  );
+  )
+ON CONFLICT DO NOTHING;

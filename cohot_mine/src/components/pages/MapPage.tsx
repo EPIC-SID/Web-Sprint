@@ -1,227 +1,344 @@
-import React, { useState } from 'react';
-import { MapPin, Clock, Navigation, Compass, Layers } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import { Navigation, Clock, X } from 'lucide-react';
 
-interface CampusSpot {
+interface CampusNode {
   id: string;
   name: string;
-  category: string;
-  building: string;
-  floor: string;
+  category: 'Department' | 'Canteen' | 'Lawn' | 'Gate' | 'Transit';
+  lat: number;
+  lng: number;
+  color: string;
   description: string;
   timing: string;
+  floor: string;
   amenities: string[];
-  image: string;
-  coord: { x: number; y: number };
+  studentsHere?: { name: string; avatar: string }[];
 }
 
-const SPOTS: CampusSpot[] = [
+const PCCOE_NODES: CampusNode[] = [
   {
-    id: 'spot_1',
-    name: 'Central Computing Facility (CCF Labs)',
-    category: 'Labs',
-    building: 'Computer & IT Building',
-    floor: '2nd & 3rd Floor',
+    id: 'comp_dept',
+    name: 'Computer & IT Department Building',
+    category: 'Department',
+    lat: 18.65185,
+    lng: 73.7626,
+    color: '#3b82f6', // Blue
     description:
-      'High-performance GPU workstations with Linux & Windows environments for machine learning practicals and competitive coding.',
-    timing: '8:00 AM - 8:00 PM (Mon-Sat)',
-    amenities: ['Gigabit LAN', 'Air Conditioned', 'NVIDIA GPUs', 'Uninterrupted Power'],
-    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
-    coord: { x: 38, y: 35 },
+      'Houses Computer Engineering & IT classrooms, CCF server rooms, AI/ML laboratories, and student seminar halls.',
+    timing: '8:00 AM - 7:30 PM',
+    floor: 'Ground to 4th Floor',
+    amenities: ['CCF High-Perf Labs', 'Smart Classrooms', 'Wi-Fi 6', 'Water Cooler'],
+    studentsHere: [
+      {
+        name: 'Siddhant Verma',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      },
+      {
+        name: 'Shravan Kolhe',
+        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+      },
+      {
+        name: 'Felina Mathew',
+        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
+      },
+    ],
   },
   {
-    id: 'spot_2',
-    name: 'Central Library & Digital Knowledge Center',
-    category: 'Library',
-    building: 'Main Administrative Wing',
-    floor: '1st & 2nd Floor',
-    description:
-      'Over 50,000 reference books, IEEE / Springer journals, quiet reading zones, and digital terminal access.',
-    timing: '7:30 AM - 10:00 PM',
-    amenities: ['Silent Study Zone', 'IEEE Access', 'Book Lending Machine', 'Wi-Fi 6'],
-    image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800',
-    coord: { x: 55, y: 25 },
-  },
-  {
-    id: 'spot_3',
+    id: 'canteen_hub',
     name: 'Main Canteen & Nescafe Courtyard',
     category: 'Canteen',
-    building: 'Campus Center Ground',
-    floor: 'Ground Level',
+    lat: 18.6521,
+    lng: 73.7627,
+    color: '#f97316', // Orange
     description:
-      'Popular student hangout hub offering snacks, south indian delicacies, meals, juices, and coffee bar.',
+      'Central student dining area serving fresh meals, snacks, coffee, juices, and outdoor seating patio.',
     timing: '8:00 AM - 7:00 PM',
-    amenities: ['Outdoor Seating', 'UPI Enabled', 'Fast Food & Meals', 'Clean Drinking Water'],
-    image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800',
-    coord: { x: 62, y: 65 },
+    floor: 'Ground Level Courtyard',
+    amenities: ['Outdoor Seating', 'UPI Fast Checkout', 'Snack Bar', 'Juice Center'],
+    studentsHere: [
+      {
+        name: 'Arnav Telangi',
+        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
+      },
+    ],
   },
   {
-    id: 'spot_4',
-    name: 'Pimpri Chinchwad Auditorium (LRDC)',
-    category: 'Auditorium',
-    building: 'LRDC Building',
-    floor: 'Ground & 1st Floor',
+    id: 'central_lawn',
+    name: 'Central Green Lawns & Open Amphitheatre',
+    category: 'Lawn',
+    lat: 18.65195,
+    lng: 73.76275,
+    color: '#10b981', // Green
     description:
-      '800-seat state of the art air conditioned auditorium for guest lectures, TEDxPCCOE, cultural fests, and hackathons.',
-    timing: 'Events based schedule',
-    amenities: ['Dolby Surround', 'Stage Lighting Rig', 'Green Rooms', 'Dual Projectors'],
-    image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
-    coord: { x: 22, y: 50 },
+      'Lush green campus quad where students gather for cultural club practices, reading, and college festivals.',
+    timing: '24/7 Accessible',
+    floor: 'Ground Level Quad',
+    amenities: ['Shaded Gazebos', 'Solar Benches', 'Lawn Seating'],
+  },
+  {
+    id: 'admin_library',
+    name: 'Administrative Wing & Central Library',
+    category: 'Department',
+    lat: 18.6516,
+    lng: 73.76255,
+    color: '#3b82f6', // Blue
+    description:
+      'Principal Office, Student Section, Accounts, and Digital Knowledge Library holding 50,000+ technical volumes.',
+    timing: '8:00 AM - 9:00 PM',
+    floor: '1st & 2nd Floor',
+    amenities: ['Digital Research Center', 'Silent Study Hall', 'Book Lending Station'],
+  },
+  {
+    id: 'main_gate',
+    name: 'PCCOE Main Entrance Gate (Sector 26)',
+    category: 'Gate',
+    lat: 18.6524,
+    lng: 73.7629,
+    color: '#a855f7', // Purple
+    description:
+      'Primary security gateway and campus entry on Pradhikaran Road with RFID student turnstiles.',
+    timing: '6:00 AM - 10:00 PM',
+    floor: 'Street Entry',
+    amenities: ['Security Desk', 'Visitor Parking', 'Turnstile Gate'],
+  },
+  {
+    id: 'bus_transit',
+    name: 'PMPML College Bus Terminal',
+    category: 'Transit',
+    lat: 18.6527,
+    lng: 73.76295,
+    color: '#64748b', // Dark Slate
+    description:
+      'Public transport bus stop connecting Nigdi, Akurdi Station, Chinchwad, and Pune City center.',
+    timing: '5:30 AM - 11:30 PM',
+    floor: 'Main Road',
+    amenities: ['Bus Shelter', 'Auto Rickshaw Stand'],
+  },
+  {
+    id: 'mech_building',
+    name: 'Mechanical & Civil Workshop Complex',
+    category: 'Department',
+    lat: 18.6514,
+    lng: 73.7624,
+    color: '#3b82f6', // Blue
+    description:
+      'CNC Machining Center, Fluid Dynamics Lab, Robotics workshop, and Formula Student fabrication bay.',
+    timing: '8:00 AM - 6:00 PM',
+    floor: 'Ground & 1st Floor',
+    amenities: ['Industrial Lathes', '3D Printing Lab', 'Heavy Machinery'],
   },
 ];
 
 export const MapPage: React.FC = () => {
-  const [selectedSpot, setSelectedSpot] = useState<CampusSpot>(SPOTS[0]);
-  const [activeFilter, setActiveFilter] = useState('All');
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const [selectedSpot, setSelectedSpot] = useState<CampusNode | null>(null);
 
-  const categories = ['All', 'Labs', 'Library', 'Canteen', 'Auditorium'];
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
 
-  const filteredSpots =
-    activeFilter === 'All' ? SPOTS : SPOTS.filter((s) => s.category === activeFilter);
+    // Center coordinates for PCCOE Campus, Sector 26, Pradhikaran, Nigdi, Pune
+    const centerLat = 18.6519;
+    const centerLng = 73.7627;
+
+    const map = L.map(mapContainerRef.current, {
+      center: [centerLat, centerLng],
+      zoom: 17.5,
+      zoomControl: false,
+      attributionControl: false,
+      maxZoom: 19,
+      minZoom: 16,
+    });
+
+    // CartoDB Positron high-resolution light street tiles
+    L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      {
+        subdomains: 'abcd',
+        maxZoom: 20,
+      }
+    ).addTo(map);
+
+    // Zoom control at bottom-right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Network connection lines between building nodes
+    const connections: [number, number][][] = [
+      [[18.6527, 73.76295], [18.6524, 73.7629]],
+      [[18.6524, 73.7629], [18.6521, 73.7627]],
+      [[18.6521, 73.7627], [18.65195, 73.76275]],
+      [[18.65195, 73.76275], [18.65185, 73.7626]],
+      [[18.65185, 73.7626], [18.6516, 73.76255]],
+      [[18.6516, 73.76255], [18.6514, 73.7624]],
+      [[18.6521, 73.7627], [18.65185, 73.7626]],
+    ];
+
+    connections.forEach((coords) => {
+      L.polyline(coords, {
+        color: '#3b82f6',
+        weight: 2,
+        opacity: 0.45,
+        dashArray: '4, 6',
+      }).addTo(map);
+    });
+
+    // Add interactive nodes and student avatar markers
+    PCCOE_NODES.forEach((node) => {
+      // Custom node HTML pin
+      const iconHtml = `
+        <div style="position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+          <div style="width: 22px; height: 22px; border-radius: 9999px; background: ${node.color}; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center;">
+            <div style="width: 6px; height: 6px; border-radius: 9999px; background: white;"></div>
+          </div>
+          ${
+            node.studentsHere && node.studentsHere.length > 0
+              ? `
+            <div style="position: absolute; top: -14px; right: -16px; display: flex; align-items: center;">
+              ${node.studentsHere
+                .slice(0, 2)
+                .map(
+                  (s, i) => `
+                <img src="${s.avatar}" style="width: 18px; height: 18px; border-radius: 9999px; border: 1.5px solid white; margin-left: ${
+                    i > 0 ? '-6px' : '0'
+                  }; box-shadow: 0 2px 6px rgba(0,0,0,0.3);" />
+              `
+                )
+                .join('')}
+            </div>
+          `
+              : ''
+          }
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        html: iconHtml,
+        className: 'custom-campus-pin',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+
+      const marker = L.marker([node.lat, node.lng], { icon: customIcon }).addTo(map);
+
+      marker.on('click', () => {
+        setSelectedSpot(node);
+      });
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
 
   return (
-    <div className="space-y-6 animate-[fadeIn_0.2s_ease-out]">
+    <div className="space-y-4 animate-[fadeIn_0.2s_ease-out] text-[#e4e4e7] relative">
       {/* Header */}
       <div>
-        <h1 className="font-heading text-2xl font-bold text-foreground">PCCOE Campus Navigation</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Find CCF labs, central library, canteens, auditoriums, and department blocks
+        <div className="relative inline-flex items-center">
+          <h1 className="font-heading text-xl font-bold text-white tracking-tight">
+            c/maps
+          </h1>
+          <img
+            src="/assets/dark1.svg"
+            alt=""
+            className="absolute -top-3 left-[18px] w-6 h-6 pointer-events-none z-10"
+          />
+        </div>
+        <p className="text-xs text-zinc-400 mt-1">
+          Interactive internal campus map for PCCOE.
         </p>
       </div>
 
-      {/* Category Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-        {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => setActiveFilter(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-              activeFilter === c
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+      {/* Main Map Card */}
+      <div className="relative rounded-[24px] overflow-hidden border border-white/[0.08] shadow-2xl bg-black min-h-[560px] h-[calc(100vh-210px)] w-full">
+        {/* Leaflet Map Canvas */}
+        <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Interactive Map & Detail View */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 items-start">
-        {/* Interactive Schematic Campus Canvas */}
-        <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[380px] shadow-sm">
-          {/* Blueprint Grid Lines */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-
-          {/* Campus Map Header */}
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Compass className="w-5 h-5 text-primary" />
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                PCCOE Sector 26 Campus Layout
-              </span>
-            </div>
-            <span className="text-[11px] px-2.5 py-1 rounded-md bg-secondary text-muted-foreground font-mono">
-              NIGDI, PUNE
-            </span>
-          </div>
-
-          {/* Interactive Spot Markers */}
-          <div className="relative z-10 my-12 h-64 w-full border border-dashed border-border/80 rounded-xl bg-background/50 backdrop-blur-sm p-4">
-            {/* Department Buildings Blocks */}
-            <div className="absolute top-4 left-4 w-36 h-20 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-[10px] font-bold text-indigo-500 text-center p-1">
-              Computer & IT Building
-            </div>
-            <div className="absolute top-4 right-6 w-36 h-20 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-[10px] font-bold text-emerald-500 text-center p-1">
-              Admin & Central Library
-            </div>
-            <div className="absolute bottom-6 left-6 w-32 h-16 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-[10px] font-bold text-pink-500 text-center p-1">
-              LRDC Auditorium
-            </div>
-            <div className="absolute bottom-6 right-8 w-32 h-16 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[10px] font-bold text-amber-500 text-center p-1">
-              Main Canteen & Court
-            </div>
-
-            {/* Clickable Spot Pins */}
-            {filteredSpots.map((spot) => (
-              <button
-                key={spot.id}
-                onClick={() => setSelectedSpot(spot)}
-                style={{ top: `${spot.coord.y}%`, left: `${spot.coord.x}%` }}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 p-2 rounded-full shadow-lg transition-all cursor-pointer z-20 ${
-                  selectedSpot.id === spot.id
-                    ? 'bg-primary text-primary-foreground scale-125 ring-4 ring-primary/20'
-                    : 'bg-card text-foreground hover:scale-110 border border-border'
-                }`}
-              >
-                <MapPin className="w-4 h-4" />
-              </button>
-            ))}
-          </div>
-
-          <div className="relative z-10 flex items-center justify-between text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5" /> Click pin to view location info
-            </span>
-            <span>4 Key Facilities Active</span>
-          </div>
-        </div>
-
-        {/* Selected Spot Details Card */}
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
-          <div className="h-44 overflow-hidden relative">
-            <img
-              src={selectedSpot.image}
-              alt={selectedSpot.name}
-              className="w-full h-full object-cover"
-            />
-            <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-black/60 text-white backdrop-blur-sm">
-              {selectedSpot.category}
-            </span>
-          </div>
-
-          <div className="p-5 flex-1 flex flex-col justify-between">
-            <div>
-              <h2 className="text-base font-bold text-foreground mb-1">{selectedSpot.name}</h2>
-              <div className="text-xs text-primary font-medium mb-3">
-                {selectedSpot.building} • {selectedSpot.floor}
-              </div>
-
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                {selectedSpot.description}
-              </p>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-                <Clock className="w-3.5 h-3.5 text-foreground" />
-                <span>{selectedSpot.timing}</span>
-              </div>
-
-              {/* Amenities */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-foreground uppercase tracking-wider block">
-                  Available Facilities:
+        {/* Selected Spot Detail Floating Modal */}
+        {selectedSpot && (
+          <div className="absolute top-4 left-4 z-20 max-w-sm w-full bg-[#0e0e13]/95 backdrop-blur-md border border-white/[0.12] rounded-2xl p-5 shadow-2xl animate-[scaleIn_0.2s_ease-out]">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: `${selectedSpot.color}20`,
+                    color: selectedSpot.color,
+                  }}
+                >
+                  {selectedSpot.category}
                 </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedSpot.amenities.map((am) => (
-                    <span
-                      key={am}
-                      className="px-2 py-0.5 rounded-md bg-secondary text-foreground text-[10px] font-medium"
-                    >
-                      {am}
-                    </span>
-                  ))}
+                <h3 className="text-sm font-bold text-white mt-1.5">{selectedSpot.name}</h3>
+                <div className="text-xs text-zinc-400 font-medium">{selectedSpot.floor}</div>
+              </div>
+
+              <button
+                onClick={() => setSelectedSpot(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed mb-3">
+              {selectedSpot.description}
+            </p>
+
+            <div className="flex items-center gap-2 text-xs text-zinc-400 mb-3">
+              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+              <span>{selectedSpot.timing}</span>
+            </div>
+
+            {/* Amenities Tags */}
+            <div className="flex flex-wrap gap-1 mb-4">
+              {selectedSpot.amenities.map((am) => (
+                <span
+                  key={am}
+                  className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] text-zinc-300 font-medium"
+                >
+                  {am}
+                </span>
+              ))}
+            </div>
+
+            {/* Students Currently Here */}
+            {selectedSpot.studentsHere && selectedSpot.studentsHere.length > 0 && (
+              <div className="pt-2.5 border-t border-white/[0.06] mb-3">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase mb-1.5">
+                  Checked-in Students:
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {selectedSpot.studentsHere.map((s, idx) => (
+                      <img
+                        key={idx}
+                        src={s.avatar}
+                        alt={s.name}
+                        className="w-6 h-6 rounded-full ring-2 ring-[#0e0e13] object-cover"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-zinc-400">
+                    {selectedSpot.studentsHere.map((s) => s.name.split(' ')[0]).join(', ')}
+                  </span>
                 </div>
               </div>
-            </div>
+            )}
 
             <button
-              onClick={() => alert(`Directions to ${selectedSpot.name} started!`)}
-              className="w-full mt-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => alert(`Navigating to ${selectedSpot.name}...`)}
+              className="w-full py-2 rounded-xl bg-[#2dd4bf] text-black font-bold text-xs hover:bg-[#20c997] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-[#2dd4bf]/20"
             >
-              <Navigation className="w-3.5 h-3.5" />
-              <span>Start Campus Navigation</span>
+              <Navigation className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Navigate to Facility</span>
             </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

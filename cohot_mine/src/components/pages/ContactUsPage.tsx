@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { MapPin, Send, CheckCircle2, Heart } from 'lucide-react';
+import { Mail, MapPin, Phone, Send, CheckCircle2 } from 'lucide-react';
 
-export const ContactUsPage: React.FC = () => {
+export const ContactUsPage: React.FC<{ darkMode?: boolean }> = ({ darkMode = true }) => {
   const [submitted, setSubmitted] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [msg, setMsg] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -13,92 +13,120 @@ export const ContactUsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-[fadeIn_0.2s_ease-out] max-w-2xl mx-auto">
-      {/* Header */}
+    <div className={`space-y-6 animate-[fadeIn_0.2s_ease-out] ${darkMode ? 'text-[#e4e4e7]' : 'text-slate-800'}`}>
       <div>
-        <h1 className="font-heading text-2xl font-bold text-foreground">Contact & Student Support</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Have feedback, found a bug, or want your club listed on Cohort? Reach out to us!
+        <div className="flex items-center gap-2">
+          <h1 className={`font-heading text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>c/contact</h1>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#2dd4bf]/15 text-[#2dd4bf] border border-[#2dd4bf]/30">
+            Support
+          </span>
+        </div>
+        <p className={`text-xs mt-1 ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+          Have feedback, bugs, or feature suggestions for Cohort? Reach out to the student dev team.
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        {!submitted ? (
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`border rounded-2xl p-6 shadow-xl ${
+          darkMode ? 'bg-[#0e0e13] border-white/[0.08] shadow-black/40' : 'bg-white border-slate-200 shadow-slate-200/50'
+        }`}>
+          <h2 className={`text-sm font-bold mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Send a Message</h2>
+          {submitted ? (
+            <div className="py-8 text-center space-y-3">
+              <CheckCircle2 className="w-12 h-12 text-[#2dd4bf] mx-auto" />
+              <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Message Received!</h3>
+              <p className={`text-xs ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Thanks for helping make Cohort better for everyone at PCCOE.</p>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="px-4 py-1.5 rounded-xl bg-[#2dd4bf] text-black text-xs font-bold"
+              >
+                Send Another
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="block text-muted-foreground mb-1 font-medium">Your Name</label>
+                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Your Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="Siddhant Deshmukh"
+                  placeholder="e.g. Siddhant Verma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-secondary rounded-xl px-3.5 py-2.5 border border-border text-foreground outline-none"
+                  className={`w-full rounded-xl px-3 py-2 border outline-none ${
+                    darkMode ? 'bg-[#121217] border-white/[0.08] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
                 />
               </div>
+
               <div>
-                <label className="block text-muted-foreground mb-1 font-medium">Your College Email</label>
+                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>PCCOE Email</label>
                 <input
                   type="email"
                   required
-                  placeholder="student@pccoepune.org"
+                  placeholder="name.roll@pccoepune.org"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-secondary rounded-xl px-3.5 py-2.5 border border-border text-foreground outline-none"
+                  className={`w-full rounded-xl px-3 py-2 border outline-none ${
+                    darkMode ? 'bg-[#121217] border-white/[0.08] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
                 />
+              </div>
+
+              <div>
+                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Message / Bug Report</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Describe your issue or suggestion..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className={`w-full rounded-xl px-3 py-2 border outline-none resize-none ${
+                    darkMode ? 'bg-[#121217] border-white/[0.08] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-[#2dd4bf] text-black font-bold text-xs hover:bg-[#20c997] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-[#2dd4bf]/20"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Submit Feedback</span>
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div className={`border rounded-2xl p-6 shadow-xl space-y-5 ${
+          darkMode ? 'bg-[#0e0e13] border-white/[0.08] shadow-black/40' : 'bg-white border-slate-200 shadow-slate-200/50'
+        }`}>
+          <h2 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Campus Contact Info</h2>
+          <div className="space-y-4 text-xs">
+            <div className="flex items-start gap-3">
+              <MapPin className="w-4 h-4 text-[#2dd4bf] shrink-0 mt-0.5" />
+              <div>
+                <strong className={`block ${darkMode ? 'text-white' : 'text-slate-900'}`}>Pimpri Chinchwad College of Engineering</strong>
+                <span className={darkMode ? 'text-zinc-400' : 'text-slate-600'}>Sector - 26, Pradhikaran, Nigdi, Pimpri-Chinchwad, Pune - 411044</span>
               </div>
             </div>
 
-            <div>
-              <label className="block text-muted-foreground mb-1 font-medium">Message / Feedback</label>
-              <textarea
-                rows={4}
-                required
-                placeholder="Share your thoughts, suggestions, or issues..."
-                value={msg}
-                onChange={(e) => setMsg(e.target.value)}
-                className="w-full bg-secondary rounded-xl px-3.5 py-2.5 border border-border text-foreground outline-none resize-none"
-              />
+            <div className="flex items-center gap-3">
+              <Mail className="w-4 h-4 text-[#2dd4bf] shrink-0" />
+              <div>
+                <strong className={`block ${darkMode ? 'text-white' : 'text-slate-900'}`}>Email Support</strong>
+                <span className={darkMode ? 'text-zinc-400' : 'text-slate-600'}>support@cohortpccoe.in</span>
+              </div>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Send Message</span>
-            </button>
-          </form>
-        ) : (
-          <div className="py-8 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-foreground">Message Received!</h3>
-            <p className="text-xs text-muted-foreground">
-              Thank you for helping improve Cohort PCCOE. Our team will review your feedback.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* College Info Box */}
-      <div className="bg-card border border-border rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <MapPin className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-foreground">PCCOE Campus</div>
-            <div className="text-[11px] text-muted-foreground">
-              Sector 26, Pradhikaran, Nigdi, Pimpri-Chinchwad, Pune - 411044
+            <div className="flex items-center gap-3">
+              <Phone className="w-4 h-4 text-[#2dd4bf] shrink-0" />
+              <div>
+                <strong className={`block ${darkMode ? 'text-white' : 'text-slate-900'}`}>Student Helpline</strong>
+                <span className={darkMode ? 'text-zinc-400' : 'text-slate-600'}>+91 (020) 2765-3168</span>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-          Built with <Heart className="w-3 h-3 text-rose-500 fill-rose-500" /> for PCCOE students
         </div>
       </div>
     </div>

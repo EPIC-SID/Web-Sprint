@@ -166,6 +166,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
   onToggleTheme,
 }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [posts, setPosts] = useState<FeedPost[]>(INITIAL_POSTS);
   const [newPostText, setNewPostText] = useState('');
@@ -429,7 +430,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
             return (
               <button
                 key={id}
-                onClick={() => setActiveTab(id)}
+                onClick={() => {
+                  if (id === 'communities' && activeTab === 'communities') {
+                    setSelectedCommunityId(null);
+                  }
+                  setActiveTab(id);
+                }}
                 title={!isSidebarHovered ? label : undefined}
                 className={`relative flex items-center rounded-2xl text-xs transition-all duration-200 cursor-pointer ${
                   isSidebarHovered
@@ -884,7 +890,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
 
         {/* Sub-Pages Renderers */}
         {activeTab === 'communities' && (
-          <CommunitiesPage communities={communities} darkMode={darkMode} />
+          <CommunitiesPage
+            communities={communities}
+            darkMode={darkMode}
+            selectedCommunityId={selectedCommunityId}
+            onSelectCommunity={(id) => setSelectedCommunityId(id)}
+            onNavigateTab={(tab) => {
+              setActiveTab(tab as ActiveTab);
+            }}
+          />
         )}
         {activeTab === 'friends' && (
           <FriendsPage currentUserId={currentUser.id} darkMode={darkMode} />
@@ -967,7 +981,10 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
               C/COMMUNITIES
             </h3>
             <button
-              onClick={() => setActiveTab('communities')}
+              onClick={() => {
+                setSelectedCommunityId(null);
+                setActiveTab('communities');
+              }}
               className={`transition cursor-pointer ${
                 darkMode ? 'text-zinc-500 hover:text-white' : 'text-slate-400 hover:text-slate-900'
               }`}
@@ -977,26 +994,47 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
           </div>
           <div className="space-y-2">
             {[
-              'Higher Studies Club for UPSC / MPSC -...',
-              'Google Developer Groups PCCOE',
-              'Higher Studies Club for CAT / GMAT -...',
-            ].map((name, i) => (
+              {
+                id: 'higher-studies-upsc',
+                name: 'Higher Studies Club for UPSC / MPSC -...',
+                logo: 'https://api.iconify.design/lucide:book-open.svg?color=%23818cf8',
+              },
+              {
+                id: 'gdgc',
+                name: 'Google Developer Groups PCCOE',
+                logo: '/assets/clubs/gdgc.png',
+              },
+              {
+                id: 'higher-studies-cat',
+                name: 'Higher Studies Club for CAT / GMAT -...',
+                logo: 'https://api.iconify.design/lucide:graduation-cap.svg?color=%23f59e0b',
+              },
+              {
+                id: 'iic',
+                name: "Institution's Innovation Council - PCCOE",
+                logo: '/assets/cohort-logo.png',
+              },
+              {
+                id: 'owasp',
+                name: 'OWASP PCCOE Student Chapter',
+                logo: '/assets/clubs/owasp.png',
+              },
+            ].map((club) => (
               <div
-                key={i}
-                onClick={() => setActiveTab('communities')}
+                key={club.id}
+                onClick={() => {
+                  setSelectedCommunityId(club.id);
+                  setActiveTab('communities');
+                }}
                 className={`flex items-center gap-2.5 p-1.5 rounded-xl transition cursor-pointer group ${
                   darkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-slate-100'
                 }`}
               >
-                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
+                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden border border-white/10">
                   <img
-                    src={
-                      i === 1
-                        ? '/assets/clubs/gdgc.png'
-                        : '/assets/cohort-logo.png'
-                    }
+                    src={club.logo}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </div>
                 <span
@@ -1006,7 +1044,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                       : 'text-slate-700 group-hover:text-slate-950 font-medium'
                   }`}
                 >
-                  {name}
+                  {club.name}
                 </span>
               </div>
             ))}

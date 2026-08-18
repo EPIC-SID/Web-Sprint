@@ -127,6 +127,7 @@ export const FriendsPage: React.FC<FriendsPageProps> = ({ currentUserId, darkMod
                       <img
                         src={peer.avatar}
                         alt={peer.name}
+                        referrerPolicy="no-referrer"
                         className={`w-11 h-11 rounded-full object-cover ring-1 ${darkMode ? 'ring-white/10' : 'ring-slate-200'}`}
                       />
                     ) : (

@@ -1,329 +1,432 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Users, Trophy, Plus, Send, CheckCircle2 } from 'lucide-react';
-import { fetchConnectRequests, createConnectRequest } from '../../lib/api';
-import type { ConnectTeammateRequest } from '../../lib/api';
+import React, { useState } from 'react';
+import {
+  Search,
+  ShieldCheck,
+  Send,
+  Lock,
+  Paperclip,
+  Smile,
+  Circle,
+} from 'lucide-react';
 
-interface ConnectPageProps {
-  currentUserId?: string;
-  currentUser?: {
-    name: string;
-    branch?: string;
-    year?: string;
-  };
-  darkMode?: boolean;
+interface ChatUser {
+  id: string;
+  name: string;
+  handle: string;
+  avatarText?: string;
+  avatarColor: string;
+  isOnline?: boolean;
 }
 
-export const ConnectPage: React.FC<ConnectPageProps> = ({
-  currentUserId,
-  currentUser,
-  darkMode = true,
-}) => {
+const MEMBERS: ChatUser[] = [
+  {
+    id: 'u1',
+    name: '004_Aaryan_Bhujang',
+    handle: '@aaryan23',
+    avatarText: '🙂',
+    avatarColor: 'bg-rose-500',
+    isOnline: true,
+  },
+  {
+    id: 'u2',
+    name: '005_nisha Devatwal',
+    handle: '@nisha24',
+    avatarText: 'D',
+    avatarColor: 'bg-amber-700',
+    isOnline: false,
+  },
+  {
+    id: 'u3',
+    name: '005_Rudraksh_Charhate',
+    handle: '@rudraksh23',
+    avatarText: '🙂',
+    avatarColor: 'bg-rose-500',
+    isOnline: true,
+  },
+  {
+    id: 'u4',
+    name: '007_Aboli Jadhav',
+    handle: '@aboli25',
+    avatarText: 'A',
+    avatarColor: 'bg-sky-500',
+    isOnline: false,
+  },
+  {
+    id: 'u5',
+    name: '021-Shreyash_Desai',
+    handle: '@shreyash23',
+    avatarText: '🌙',
+    avatarColor: 'bg-indigo-900',
+    isOnline: true,
+  },
+  {
+    id: 'u6',
+    name: '027 - MANASVI PATIL',
+    handle: '@manasvi24',
+    avatarText: 'P',
+    avatarColor: 'bg-blue-600',
+    isOnline: false,
+  },
+  {
+    id: 'u7',
+    name: '030_Swaraj Matre',
+    handle: '@swaraj24',
+    avatarText: 'D',
+    avatarColor: 'bg-emerald-600',
+    isOnline: true,
+  },
+  {
+    id: 'u8',
+    name: '035_Vaibhav Nimbole',
+    handle: '@vaibhav251',
+    avatarText: 'N',
+    avatarColor: 'bg-stone-600',
+    isOnline: false,
+  },
+  {
+    id: 'u9',
+    name: '046_Shubhang_Doley',
+    handle: '@shubhang24',
+    avatarText: '🙂',
+    avatarColor: 'bg-amber-400',
+    isOnline: true,
+  },
+  {
+    id: 'u10',
+    name: '047_Aaryan Nerkar',
+    handle: '@aaryan24',
+    avatarText: 'N',
+    avatarColor: 'bg-teal-600',
+    isOnline: true,
+  },
+];
+
+interface MessageItem {
+  id: string;
+  sender: 'me' | 'them';
+  text: string;
+  time: string;
+}
+
+export const ConnectPage: React.FC<{
+  currentUserId?: string;
+  currentUser?: { name: string; email: string };
+  darkMode?: boolean;
+}> = ({ darkMode = false }) => {
   const [search, setSearch] = useState('');
-  const [requests, setRequests] = useState<ConnectTeammateRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [applied, setApplied] = useState<Record<string, boolean>>({});
-  const [showModal, setShowModal] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newHackathon, setNewHackathon] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newSkills, setNewSkills] = useState('');
+  const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
+  const [messages, setMessages] = useState<Record<string, MessageItem[]>>({
+    u1: [
+      { id: 'm1', sender: 'them', text: 'Hey, are you participating in SIH 2026?', time: '10:30 AM' },
+      { id: 'm2', sender: 'me', text: 'Yes! Finalizing the team structure right now on Cohort.', time: '10:32 AM' },
+    ],
+  });
+  const [inputText, setInputText] = useState('');
 
-  useEffect(() => {
-    fetchConnectRequests().then((data) => {
-      setRequests(data);
-      setLoading(false);
-    });
-  }, []);
+  const filteredMembers = MEMBERS.filter(
+    (m) =>
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
+      m.handle.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const handleApply = (id: string) => {
-    setApplied((prev) => ({ ...prev, [id]: true }));
-  };
-
-  const handleCreateRequest = async (e: React.FormEvent) => {
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newHackathon) return;
+    if (!selectedUser || !inputText.trim()) return;
 
-    const skillsArray = newSkills
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const newReq: ConnectTeammateRequest = {
-      id: `req_${Date.now()}`,
-      hackathon: newHackathon,
-      title: newTitle,
-      author: {
-        id: currentUserId || '',
-        name: currentUser?.name || 'Siddhant Verma',
-        branch: currentUser?.branch || 'Computer Engineering',
-        year: currentUser?.year || 'TE',
-      },
-      description: newDesc,
-      requiredSkills: skillsArray,
-      teamSize: '1 / 4 Members',
-      deadline: 'Open',
-      isOpen: true,
+    const userMsgs = messages[selectedUser.id] || [];
+    const newMsg: MessageItem = {
+      id: `msg_${Date.now()}`,
+      sender: 'me',
+      text: inputText.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setRequests([newReq, ...requests]);
-    setShowModal(false);
+    setMessages({
+      ...messages,
+      [selectedUser.id]: [...userMsgs, newMsg],
+    });
+    setInputText('');
 
-    if (currentUserId) {
-      try {
-        await createConnectRequest(
-          currentUserId,
-          newHackathon,
-          newTitle,
-          newDesc,
-          skillsArray,
-          '1 / 4 Members',
-          'Open'
-        );
-      } catch (err) {
-        console.warn('Create connect request error:', err);
-      }
-    }
-
-    setNewTitle('');
-    setNewHackathon('');
-    setNewDesc('');
-    setNewSkills('');
+    // Simulate auto-reply after 800ms
+    setTimeout(() => {
+      setMessages((prev) => ({
+        ...prev,
+        [selectedUser.id]: [
+          ...(prev[selectedUser.id] || []),
+          {
+            id: `msg_rep_${Date.now()}`,
+            sender: 'them',
+            text: 'Got it! Let’s collaborate and build this.',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ],
+      }));
+    }, 800);
   };
 
   return (
     <div className={`space-y-6 animate-[fadeIn_0.2s_ease-out] ${darkMode ? 'text-[#e4e4e7]' : 'text-slate-800'}`}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className={`font-heading text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-              c/connect
-            </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
-              Team Finder
-            </span>
-          </div>
-          <p className={`text-xs mt-1 ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
-            Form teams for SIH 2026, Google Solution Challenge, and national CTFs.
-          </p>
+      <div>
+        <div className="relative inline-flex items-center">
+          <h1 className={`font-heading text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+            c/connect
+          </h1>
+          <img
+            src={darkMode ? '/assets/dark1.svg' : '/assets/light1.svg'}
+            alt=""
+            className="absolute -top-3.5 left-[14px] w-6 h-6 pointer-events-none z-10"
+          />
         </div>
-
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 rounded-xl bg-[#2dd4bf] text-black text-xs font-bold hover:bg-[#20c997] transition cursor-pointer flex items-center gap-1.5 shrink-0 w-fit shadow-lg shadow-[#2dd4bf]/20"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Post Requirement</span>
-        </button>
+        <p className={`text-xs mt-1 ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+          Encrypted chats for cohort users.
+        </p>
       </div>
 
-      {/* Search */}
-      <div className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 border transition-colors ${
-        darkMode ? 'bg-[#121217] border-white/[0.08]' : 'bg-white border-slate-200 shadow-sm'
+      {/* Main Split Chat Card */}
+      <div className={`border rounded-[24px] overflow-hidden shadow-sm flex flex-col md:flex-row h-[620px] transition-colors ${
+        darkMode ? 'bg-[#0e0e13] border-white/[0.08]' : 'bg-white border-slate-200'
       }`}>
-        <Search className={`w-4 h-4 shrink-0 ${darkMode ? 'text-zinc-400' : 'text-slate-400'}`} />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by hackathon, skill (e.g. React, IoT, Flutter), or keyword..."
-          className={`flex-1 bg-transparent text-xs outline-none ${
-            darkMode ? 'text-white placeholder:text-zinc-500' : 'text-slate-900 placeholder:text-slate-400'
-          }`}
-        />
-      </div>
+        {/* =================================================================== */}
+        {/* LEFT PANEL: User Directory */}
+        {/* =================================================================== */}
+        <div className={`w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r flex flex-col ${
+          darkMode ? 'border-white/[0.08] bg-[#07070a]/60' : 'border-slate-200 bg-white'
+        }`}>
+          {/* Search Input */}
+          <div className="p-4">
+            <div className={`flex items-center gap-2 rounded-xl px-3 py-2 border ${
+              darkMode ? 'bg-[#121217] border-white/[0.08]' : 'bg-slate-100/80 border-slate-200'
+            }`}>
+              <Search className={`w-3.5 h-3.5 shrink-0 ${darkMode ? 'text-zinc-400' : 'text-slate-400'}`} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search"
+                className={`flex-1 bg-transparent text-xs outline-none ${
+                  darkMode ? 'text-white placeholder:text-zinc-500' : 'text-slate-900 placeholder:text-slate-400'
+                }`}
+              />
+            </div>
+          </div>
 
-      {/* Requests List */}
-      {loading ? (
-        <div className="py-12 text-center text-xs text-zinc-500">Loading hackathon teams...</div>
-      ) : (
-        <div className="space-y-4">
-          {requests
-            .filter(
-              (r) =>
-                r.hackathon.toLowerCase().includes(search.toLowerCase()) ||
-                r.title.toLowerCase().includes(search.toLowerCase()) ||
-                r.requiredSkills.some((s) => s.toLowerCase().includes(search.toLowerCase()))
-            )
-            .map((req) => {
-              const isApplied = applied[req.id];
-              return (
-                <div
-                  key={req.id}
-                  className={`border rounded-2xl p-5 transition-all flex flex-col justify-between shadow-xl ${
-                    darkMode
-                      ? 'bg-[#0e0e13] border-white/[0.08] hover:border-white/20 shadow-black/30'
-                      : 'bg-white border-slate-200 hover:border-slate-300 shadow-slate-200/50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                          darkMode
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            : 'bg-blue-50 text-blue-600 border-blue-200'
-                        }`}>
-                          <Trophy className="w-3 h-3" />
-                          {req.hackathon}
-                        </span>
-                        <span className={`text-xs ${darkMode ? 'text-zinc-500' : 'text-slate-400'}`}>• {req.deadline}</span>
-                      </div>
-                      <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{req.title}</h3>
-                    </div>
+          {/* Directory Sections */}
+          <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 scrollbar-hide text-xs">
+            {/* RECENTS */}
+            <div>
+              <div className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                darkMode ? 'text-zinc-500' : 'text-slate-400'
+              }`}>
+                RECENTS
+              </div>
+              <div className={`text-xs italic ${darkMode ? 'text-zinc-600' : 'text-slate-400'}`}>
+                No users
+              </div>
+            </div>
 
-                    <button
-                      onClick={() => handleApply(req.id)}
-                      disabled={isApplied}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                        isApplied
-                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default'
-                          : 'bg-[#2dd4bf] text-black font-bold hover:bg-[#20c997]'
+            {/* FOLLOWERS */}
+            <div>
+              <div className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                darkMode ? 'text-zinc-500' : 'text-slate-400'
+              }`}>
+                FOLLOWERS
+              </div>
+              <div className={`text-xs italic ${darkMode ? 'text-zinc-600' : 'text-slate-400'}`}>
+                No users
+              </div>
+            </div>
+
+            {/* MEMBERS */}
+            <div>
+              <div className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${
+                darkMode ? 'text-zinc-500' : 'text-slate-400'
+              }`}>
+                MEMBERS
+              </div>
+              <div className="space-y-1">
+                {filteredMembers.map((user) => {
+                  const isSelected = selectedUser?.id === user.id;
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => setSelectedUser(user)}
+                      className={`flex items-center gap-3 p-2 rounded-xl transition cursor-pointer ${
+                        isSelected
+                          ? darkMode
+                            ? 'bg-white/[0.08]'
+                            : 'bg-slate-100'
+                          : darkMode
+                          ? 'hover:bg-white/[0.04]'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
-                      {isApplied ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Applied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Apply to Team</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                      {/* Avatar */}
+                      <div className={`w-9 h-9 rounded-full ${user.avatarColor} text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm`}>
+                        {user.avatarText}
+                      </div>
 
-                  <p className={`text-xs leading-relaxed mb-4 ${darkMode ? 'text-zinc-300' : 'text-slate-600'}`}>{req.description}</p>
-
-                  <div className={`flex flex-wrap items-center justify-between gap-3 pt-3 border-t ${
-                    darkMode ? 'border-white/[0.06]' : 'border-slate-100'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[11px] font-semibold ${darkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Required:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {req.requiredSkills.map((skill) => (
-                          <span
-                            key={skill}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium border ${
-                              darkMode
-                                ? 'bg-white/[0.04] text-zinc-300 border-white/[0.06]'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                          >
-                            {skill}
-                          </span>
-                        ))}
+                      {/* Name & Handle */}
+                      <div className="min-w-0 flex-1">
+                        <div className={`text-xs font-semibold truncate ${
+                          darkMode ? 'text-zinc-200' : 'text-slate-800'
+                        }`}>
+                          {user.name}
+                        </div>
+                        <div className={`text-[11px] font-mono truncate ${
+                          darkMode ? 'text-zinc-500' : 'text-slate-400'
+                        }`}>
+                          {user.handle}
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
 
-                    <div className={`flex items-center gap-3 text-xs ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" /> {req.teamSize}
+        {/* =================================================================== */}
+        {/* RIGHT PANEL: Active Encrypted Chat / Empty State */}
+        {/* =================================================================== */}
+        <div className={`flex-1 flex flex-col justify-between ${
+          darkMode ? 'bg-[#0e0e13]' : 'bg-[#fafafa]'
+        }`}>
+          {selectedUser ? (
+            <>
+              {/* Chat Header */}
+              <div className={`px-6 py-4 border-b flex items-center justify-between ${
+                darkMode ? 'border-white/[0.08] bg-[#0e0e13]' : 'border-slate-200 bg-white'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full ${selectedUser.avatarColor} text-white flex items-center justify-center text-xs font-bold`}>
+                    {selectedUser.avatarText}
+                  </div>
+                  <div>
+                    <h3 className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      {selectedUser.name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
+                      <span className="flex items-center gap-1 text-emerald-500 font-semibold">
+                        <Circle className="w-1.5 h-1.5 fill-emerald-500 text-emerald-500" />
+                        Online
                       </span>
-                      <span>
-                        Posted by <strong className={`font-medium ${darkMode ? 'text-white' : 'text-slate-900'}`}>{req.author.name}</strong>
-                      </span>
+                      <span>•</span>
+                      <span className="font-mono">{selectedUser.handle}</span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-        </div>
-      )}
 
-      {/* Create Team Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`border rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-[scaleIn_0.2s_ease-out] ${
-            darkMode ? 'bg-[#0e0e13] border-white/[0.1]' : 'bg-white border-slate-200'
-          }`}>
-            <h2 className={`text-base font-bold mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Post Teammate Requirement</h2>
-            <form onSubmit={handleCreateRequest} className="space-y-4 text-xs">
-              <div>
-                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Hackathon / Event</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Smart India Hackathon 2026"
-                  value={newHackathon}
-                  onChange={(e) => setNewHackathon(e.target.value)}
-                  className={`w-full rounded-xl px-3 py-2 border outline-none ${
-                    darkMode
-                      ? 'bg-[#121217] border-white/[0.08] text-white'
-                      : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                  <Lock className="w-3 h-3" />
+                  <span>E2E Encrypted</span>
+                </div>
               </div>
 
-              <div>
-                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Problem Statement / Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. AI-driven Smart Irrigation System"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className={`w-full rounded-xl px-3 py-2 border outline-none ${
+              {/* Message History */}
+              <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                <div className="text-center my-2">
+                  <span className={`text-[10px] px-3 py-1 rounded-full border ${
                     darkMode
-                      ? 'bg-[#121217] border-white/[0.08] text-white'
-                      : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
+                      ? 'bg-white/[0.03] border-white/[0.08] text-zinc-500'
+                      : 'bg-white border-slate-200 text-slate-400 shadow-sm'
+                  }`}>
+                    Messages auto-disappear 30 seconds after read
+                  </span>
+                </div>
+
+                {(messages[selectedUser.id] || []).map((msg) => {
+                  const isMe = msg.sender === 'me';
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                    >
+                      <div
+                        className={`max-w-sm px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${
+                          isMe
+                            ? 'bg-[#2563eb] text-white rounded-br-none'
+                            : darkMode
+                            ? 'bg-[#1a1a24] text-zinc-200 rounded-bl-none border border-white/[0.06]'
+                            : 'bg-white text-slate-800 rounded-bl-none border border-slate-200'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                      <span className={`text-[9px] mt-1 px-1 ${
+                        darkMode ? 'text-zinc-500' : 'text-slate-400'
+                      }`}>
+                        {msg.time}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div>
-                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Description & Roles Needed</label>
-                <textarea
-                  rows={3}
-                  placeholder="Briefly describe your project and what kind of developers/designers you need..."
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  className={`w-full rounded-xl px-3 py-2 border outline-none resize-none ${
-                    darkMode
-                      ? 'bg-[#121217] border-white/[0.08] text-white'
-                      : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block mb-1 font-medium ${darkMode ? 'text-zinc-400' : 'text-slate-600'}`}>Required Skills (comma-separated)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. React, Node.js, PyTorch, Figma"
-                  value={newSkills}
-                  onChange={(e) => setNewSkills(e.target.value)}
-                  className={`w-full rounded-xl px-3 py-2 border outline-none ${
-                    darkMode
-                      ? 'bg-[#121217] border-white/[0.08] text-white'
-                      : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Chat Input Bar */}
+              <form onSubmit={handleSendMessage} className={`p-4 border-t flex items-center gap-2 ${
+                darkMode ? 'border-white/[0.08] bg-[#0e0e13]' : 'border-slate-200 bg-white'
+              }`}>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className={`px-4 py-2 rounded-xl transition cursor-pointer ${
-                    darkMode ? 'text-zinc-400 hover:text-white hover:bg-white/[0.05]' : 'text-slate-600 hover:bg-slate-100'
+                  className={`p-2 rounded-xl transition ${
+                    darkMode ? 'text-zinc-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
                   }`}
                 >
-                  Cancel
+                  <Paperclip className="w-4 h-4" />
                 </button>
+
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Type an encrypted message..."
+                  className={`flex-1 rounded-xl px-4 py-2.5 text-xs outline-none border ${
+                    darkMode
+                      ? 'bg-[#121217] border-white/[0.08] text-white'
+                      : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
+
+                <button
+                  type="button"
+                  className={`p-2 rounded-xl transition ${
+                    darkMode ? 'text-zinc-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <Smile className="w-4 h-4" />
+                </button>
+
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#2dd4bf] text-black font-bold hover:bg-[#20c997] transition cursor-pointer"
+                  disabled={!inputText.trim()}
+                  className={`p-2.5 rounded-xl text-white transition ${
+                    inputText.trim()
+                      ? 'bg-[#2563eb] hover:bg-blue-600 cursor-pointer shadow-md shadow-blue-500/20'
+                      : 'bg-slate-300 dark:bg-zinc-700 cursor-not-allowed'
+                  }`}
                 >
-                  Publish Post
+                  <Send className="w-4 h-4" />
                 </button>
+              </form>
+            </>
+          ) : (
+            /* Empty State Shield Card (Matching Screenshot 1:1) */
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-sm mx-auto">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-blue-600 mb-3">
+                <ShieldCheck className="w-10 h-10 stroke-[1.8]" />
               </div>
-            </form>
-          </div>
+              <h2 className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                Start a secure conversation
+              </h2>
+              <p className={`text-xs leading-relaxed ${darkMode ? 'text-zinc-400' : 'text-slate-500'}`}>
+                Pick any cohort user from the left to open an encrypted chat. Messages auto-disappear 30 seconds after read.
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

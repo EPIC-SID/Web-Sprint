@@ -562,6 +562,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
                   <img
                     src={currentUser.avatar}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 shrink-0"
                   />
                 ) : (
@@ -900,7 +901,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({
         {activeTab === 'calendar' && <CalendarPage darkMode={darkMode} />}
         {activeTab === 'arcade' && <ArcadePage darkMode={darkMode} />}
         {activeTab === 'headsup' && <HeadsUpPage darkMode={darkMode} />}
-        {activeTab === 'contact' && <ContactUsPage darkMode={darkMode} />}
+        {activeTab === 'contact' && (
+          <ContactUsPage currentUser={currentUser} darkMode={darkMode} />
+        )}
         {activeTab === 'profile' && (
           <ProfilePage
             currentUser={currentUser}

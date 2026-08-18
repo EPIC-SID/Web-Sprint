@@ -76,9 +76,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     <img
                       src={currentUser.avatar}
                       alt={currentUser.name}
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback if Google blocks hotlinking
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
                     />
-                  ) : (
+                  ) : null}
+                  {!currentUser.avatar && (
                     <svg className="w-10 h-10 fill-white" viewBox="0 0 24 24">
                       <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4zm0 2.18l6 3v4.82c0 4.54-3.14 8.78-6 9.87-2.86-1.09-6-5.33-6-9.87V7.18l6-3zM9.5 9h5a1 1 0 0 1 0 2h-3a1 1 0 0 0 0 2h3a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-5a1 1 0 0 0 0 2zm5 6h-5a1 1 0 0 1 0-2h3a1 1 0 0 0 0-2h-3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5a1 1 0 0 0 0-2z" />
                     </svg>

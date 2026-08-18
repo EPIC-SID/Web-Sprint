@@ -24,10 +24,11 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
 
     try {
       if (isSupabaseConfigured && supabase) {
+        const redirectUrl = typeof window !== 'undefined' ? window.location.origin : 'https://web-sprint-sr.vercel.app';
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: redirectUrl,
             queryParams: {
               access_type: 'offline',
               prompt: 'consent',

@@ -2,7 +2,7 @@
 <html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dgd5sfnrq/image/upload/v1771391844/cohort-logo_g04wy2.png" />
+    <link rel="icon" type="image/png" href="/assets/cohort-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cohort PCCOE</title>
     <meta name="description" content="Cohort PCCOE is the official social platform for PCCOE students to discover communities, connect with peers, collaborate, and stay updated on campus opportunities." />
@@ -11,6 +11,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Urbanist:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Instant Pre-Hydration Theme Initializer (Zero Flash) -->
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('cohort-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (saved === 'dark' || (!saved && prefersDark)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.add('light');
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

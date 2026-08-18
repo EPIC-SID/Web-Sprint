@@ -106,7 +106,7 @@ export const MOCK_COMMUNITIES: Club[] = [
     id: 'gdgc',
     name: 'Google Developer Groups PCCOE',
     acronym: 'GDGC',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470337/gdgc_euo0ky.png',
+    logo: '/assets/clubs/gdgc.png',
     tagline: 'Building with Google Tech',
     membersCount: 680,
     category: 'Technical',

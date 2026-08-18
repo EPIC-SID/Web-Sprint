@@ -20,7 +20,7 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({
       <div className="flex items-center gap-8">
         <a href="/" className="font-semibold text-2xl tracking-tight flex items-center gap-4 group">
           <img
-            src="https://res.cloudinary.com/dgd5sfnrq/image/upload/v1771391844/cohort-logo_g04wy2.png"
+            src="/assets/cohort-logo.png"
             alt="Cohort"
             className="w-11 h-11 rounded-[6px] shadow-sm transition-transform group-hover:scale-105"
           />

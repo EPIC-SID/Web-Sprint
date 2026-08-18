@@ -166,9 +166,9 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onSignIn }) => {
 
           <div className="flex items-center gap-6">
             <img
-              src="https://res.cloudinary.com/dgd5sfnrq/image/upload/v1771391844/cohort-logo_g04wy2.png"
-              alt="Cohort"
-              className="w-20 h-20 rounded-[8px] shadow-sm"
+              src="/assets/cohort-logo.png"
+              alt="Cohort Logo"
+              className="w-12 h-12 rounded-xl mb-4"
             />
             <div className="animated-gradient-text text-[64px] md:text-[88px] font-[800] tracking-tighter">
               <div

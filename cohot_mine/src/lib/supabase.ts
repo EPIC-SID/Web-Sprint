@@ -13,4 +13,4 @@ export const supabase = isSupabaseConfigured
         detectSessionInUrl: true,
       },
     })
-  : null;
+  : null; 

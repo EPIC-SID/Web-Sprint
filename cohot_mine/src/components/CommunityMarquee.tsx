@@ -8,43 +8,43 @@ interface ClubItem {
 const CLUBS: ClubItem[] = [
   {
     name: 'OWASP',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470346/owasp_rulccu.png',
+    logo: '/assets/clubs/owasp.png',
   },
   {
     name: 'GDGC',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470337/gdgc_euo0ky.png',
+    logo: '/assets/clubs/gdgc.png',
   },
   {
     name: 'ACM',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470338/acm_dhgbaa.png',
+    logo: '/assets/clubs/acm.png',
   },
   {
     name: 'LFDT',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470346/lfdt_rueakn.png',
+    logo: '/assets/clubs/lfdt.png',
   },
   {
     name: 'IOT Club',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470343/iotclub_jkzjbs.png',
+    logo: '/assets/clubs/iotclub.png',
   },
   {
     name: 'Geeks For Geeks',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470338/gfg_kqw753.png',
+    logo: '/assets/clubs/gfg.png',
   },
   {
     name: 'AIMSA',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470338/aimsa_fza2sz.png',
+    logo: '/assets/clubs/aimsa.png',
   },
   {
     name: 'ISR',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470346/isr_ms6a3y.png',
+    logo: '/assets/clubs/isr.png',
   },
   {
     name: 'NSS',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470347/nss_zl4tv7.png',
+    logo: '/assets/clubs/nss.png',
   },
   {
     name: 'Art Circle',
-    logo: 'https://res.cloudinary.com/dgd5sfnrq/image/upload/v1770470340/artcircle_ubeulk.png',
+    logo: '/assets/clubs/artcircle.png',
   },
 ];
 

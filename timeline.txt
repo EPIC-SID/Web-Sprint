@@ -1,0 +1,103 @@
+# ================================================================================
+# 3-HOUR HACKATHON SPRINT TIMELINE & TEAM COLLABORATION GUIDE
+# Project: Cohort PCCOE (Frontend Replication via Scrape-Assisted Reverse Eng.)
+# Target: https://www.cohortpccoe.in/
+# Team Size: 2 Developers | Sprint Window: 180 Minutes (3 Hours)
+# ================================================================================
+
+--------------------------------------------------------------------------------
+1. QUICK ONBOARDING FOR TEAMMATE (AFTER PULLING)
+--------------------------------------------------------------------------------
+Step 1: Open terminal in repository root
+Step 2: Navigate into the frontend app:
+        cd cohort-pccoe
+Step 3: Install all dependencies:
+        npm install
+Step 4: Start local development server:
+        npm run dev
+Step 5: Open http://localhost:5173 (or http://localhost:5174 if 5173 is occupied)
+
+--------------------------------------------------------------------------------
+2. ARCHITECTURAL SPLIT & MODULE OWNERSHIP
+--------------------------------------------------------------------------------
+
+MEMBER A (Lead / Core UI & Visual Shell):
+  * Workspace: `cohort-pccoe/src/components/layout/`, `src/components/hero/`, `src/index.css`
+  * Responsibilities:
+    - Site theme tokens, neon gradients, glassmorphism panel styles.
+    - Hero Section (dynamic badges, stats counters, animated headings).
+    - Infinite Horizontal Community Marquee (OWASP, GDGC, ACM, CSI, IEEE, Art Circle).
+    - Campus Maps Module (`CampusMapView.tsx` interactive campus schematic & spot drawer).
+    - Responsive shell (Mobile drawer navigation & header).
+
+MEMBER B (Module Engineer / Interactive Data & State):
+  * Workspace: `cohort-pccoe/src/components/modules/`, `src/context/`, `src/data/`
+  * Responsibilities:
+    - Home Feed Module (`FeedView.tsx` - category filtering, like toggle, quick replies).
+    - Connect Module (`ConnectView.tsx` - student cards, branch filters, connect request triggers).
+    - XD Innovation Hub (`XDView.tsx` - project cards, tech stack tags, upvote counters).
+    - Google Sign-in Mock (`GoogleAuthModal.tsx` & `AuthContext.tsx` - @pccoepune.org simulation).
+    - Real-time Toast notification triggers across user interactions.
+
+--------------------------------------------------------------------------------
+3. SPRINT SCHEDULE (3-HOUR INTERVAL BREAKDOWN)
+--------------------------------------------------------------------------------
+
+[00:00 - 00:25] PHASE 1: RECONNAISSANCE, SCRAPING & FOUNDATION (25 Mins)
+--------------------------------------------------------------------------------
+- [Done] Dynamic DOM analysis & asset inspection (`scrape_site.py`).
+- [Done] React 19 + TypeScript + Vite + Tailwind CSS project scaffolding.
+- [Done] CSS design tokens extracted from target site (Inter Tight & Urbanist fonts, dark palette).
+- [Done] Core types schema (`types/index.ts`) & rich PCCOE mock data (`data/mockData.ts`).
+- [Done] Git repository setup and `.gitignore` baseline.
+>> CHECKPOINT 1: Code pushed to remote; Teammate pulls and verifies `npm run dev`.
+
+[00:25 - 01:15] PHASE 2: SHELL RECONSTRUCTION & COMPONENT MOCKUPS (50 Mins)
+--------------------------------------------------------------------------------
+- Member A:
+  * Refine Navbar with active tab states, PCCOE badge, and mobile drawer.
+  * Polish Hero section typography, glowing gradient blobs, and action buttons.
+  * Perfect the infinite auto-scrolling Community Marquee with pause-on-hover.
+- Member B:
+  * Implement Feed filtering by category (Announcements, Hackathons, Resources, General).
+  * Build Student Connect directory with live search and branch filter dropdown.
+  * Wire up XD Innovation Hub cards with upvote counters and demo links.
+>> CHECKPOINT 2 (T+75m): All 4 tabs navigable with interactive UI elements rendered.
+
+[01:15 - 02:05] PHASE 3: INTERACTIVE STATE & GOOGLE AUTH SIMULATION (50 Mins)
+--------------------------------------------------------------------------------
+- Member A:
+  * Polish Interactive Campus Map schematic with floor badges and timing drawers.
+  * Add micro-interactions (hover elevation, button press effects, smooth transitions).
+- Member B:
+  * Implement Google OAuth modal simulation (restricted to @pccoepune.org).
+  * Wire user authentication state to gate liking, replying, connecting, and submitting.
+  * Connect Toast notification feedback for all active actions.
+>> CHECKPOINT 3 (T+125m): Complete user loop working (Browse -> Sign in -> Like/Connect/Explore).
+
+[02:05 - 02:40] PHASE 4: RESPONSIVENESS, CROSS-BROWSER & POLISH (35 Mins)
+--------------------------------------------------------------------------------
+- Joint Session (Member A + Member B):
+  * Test responsive breakpoints (mobile 375px, tablet 768px, desktop 1440px).
+  * Validate visual parity against `https://www.cohortpccoe.in/`.
+  * Verify clean TypeScript compilation (`npm run build`).
+>> CHECKPOINT 4 (T+160m): Zero compilation errors, flawless UI rendering across all viewports.
+
+[02:40 - 03:00] PHASE 5: PITCH PREPARATION & FINAL SUBMISSION (20 Mins)
+--------------------------------------------------------------------------------
+- Record short 60-second video demo or walkthrough GIF.
+- Prepare 2-minute pitch covering:
+  1. Motivation: Centralizing PCCOE clubs, hackathon teaming, and campus exploration.
+  2. Tech Stack: React 19, TypeScript, Vite, Tailwind CSS, Lucide Icons, Client State.
+  3. Key Modules: Feed, Connect, XD Hub, Interactive Campus Map, Google Auth Simulation.
+- Final commit, push, and submission!
+
+--------------------------------------------------------------------------------
+4. GIT COLLABORATION RULES (AVOID MERGE CONFLICTS)
+--------------------------------------------------------------------------------
+1. Work in isolated files: Member A touches layout/hero/maps, Member B touches feed/connect/auth.
+2. Commit frequently with descriptive messages:
+   - `git commit -m "feat(marquee): add infinite auto-scroll for pccoe clubs"`
+   - `git commit -m "feat(connect): add student search and branch filtering"`
+3. Before pushing:
+   - Run `git pull origin main` to sync teammates changes.

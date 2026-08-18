@@ -1,0 +1,88 @@
+# SYSTEM ARCHITECTURE & COMPONENT TAXONOMY
+Target Application: Cohort PCCOE Clone (Student Social & Community Platform)
+Frontend Framework: React 19 + Vite + Tailwind CSS (Lucide React Icons)
+
+================================================================================
+1. ARCHITECTURAL OVERVIEW
+================================================================================
+
++-------------------------------------------------------------------------------+
+|                                CLIENT BROWSER                                 |
++-------------------------------------------------------------------------------+
+                                      |
+         +----------------------------+----------------------------+
+         |                                                         |
++--------------------+                                    +--------------------+
+|  UI Shell & Layout |                                    |    State & Data    |
+|  - Navbar & Header |                                    |    - Auth Context  |
+|  - Hero Section    |                                    |    - Active Tab    |
+|  - Community Ticker|                                    |    - Feed Store    |
+|  - Footer / Modals |                                    |    - Filter Store  |
++--------------------+                                    +--------------------+
+         |                                                         |
+         +----------------------------+----------------------------+
+                                      |
+              +-----------------------+-----------------------+
+              |                                               |
++--------------------------------+             +-------------------------------+
+|     FEATURE MODULE ROUTER      |             |         MOCK SERVICES         |
+|  1. [Home Feed Module]         |             |  - MockAuthService (Google)   |
+|     * Post creation / reaction |             |  - MockFeedService (Posts)    |
+|     * Category tags & sorting  |             |  - MockCommunityService (Clubs|
+|  2. [Connect Hub Module]       |             |  - MockCampusMapService (Geo) |
+|     * Student cards & skills   |             |  - MockXDService (Showcases)  |
+|     * Direct ping/connection   |             +-------------------------------+
+|  3. [XD Innovation Module]     |
+|     * Project showcase grid    |
+|     * Upvotes & live demos     |
+|  4. [Campus Maps Module]       |
+|     * Interactive PCCOE campus |
+|     * Department & amenity pin |
++--------------------------------+
+
+================================================================================
+2. DIRECTORY STRUCTURE
+================================================================================
+
+/cohort-pccoe-clone
+  ├── index.html
+  ├── package.json
+  ├── vite.config.ts
+  ├── tailwind.config.js
+  ├── src/
+  │   ├── main.tsx
+  │   ├── App.tsx
+  │   ├── index.css
+  │   ├── types/
+  │   │   └── index.ts                 # Post, User, Club, CampusSpot, XDProject types
+  │   ├── data/
+  │   │   └── mockData.ts              # OWASP, GDGC, ACM data, feeds, mock profiles
+  │   ├── context/
+  │   │   └── AuthContext.tsx          # Google Sign-in simulation & user profile state
+  │   ├── components/
+  │   │   ├── layout/
+  │   │   │   ├── Navbar.tsx           # Logo, nav links, auth status, mobile menu
+  │   │   │   └── Footer.tsx           # PCCOE community footer & links
+  │   │   ├── hero/
+  │   │   │   ├── HeroSection.tsx      # Main cohort headline, glow CTA, stats counter
+  │   │   │   └── MarqueeBanner.tsx    # Infinite scrolling clubs (OWASP, GDGC, ACM, CSI)
+  │   │   ├── modules/
+  │   │   │   ├── HomeFeed/
+  │   │   │   │   ├── FeedView.tsx
+  │   │   │   │   ├── CreatePostModal.tsx
+  │   │   │   │   └── PostCard.tsx
+  │   │   │   ├── Connect/
+  │   │   │   │   ├── ConnectView.tsx
+  │   │   │   │   └── StudentCard.tsx
+  │   │   │   ├── XDHub/
+  │   │   │   │   ├── XDView.tsx
+  │   │   │   │   └── ProjectCard.tsx
+  │   │   │   └── CampusMaps/
+  │   │   │       ├── CampusMapView.tsx
+  │   │   │       └── MapSpotCard.tsx
+  │   │   ├── auth/
+  │   │   │   └── GoogleAuthModal.tsx  # Realistic Google Auth popup / modal mock
+  │   │   └── ui/
+  │   │       ├── Badge.tsx
+  │   │       ├── Button.tsx
+  │   │       └── Toast.tsx

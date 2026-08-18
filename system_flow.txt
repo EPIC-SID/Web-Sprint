@@ -1,0 +1,57 @@
+# SYSTEM FLOW & USER INTERACTION DIAGRAM
+Target Application: Cohort PCCOE Clone (www.cohortpccoe.in)
+
+================================================================================
+1. USER JOURNEY FLOW (End-to-End)
+================================================================================
+
+[User Lands on Site]
+       │
+       ▼
+[Hero Section + Live Community Marquee Banner (OWASP, GDGC, ACM, IEEE)]
+       │
+       ├───────────────────────────────────────────────────────┐
+       ▼                                                       ▼
+[Browsing Guest Mode]                               [Google Sign-In Triggered]
+  - View Posts, Projects, Student Profiles            - Popup: "Sign in with Google"
+  - Interactive Filter Tabs (All / Tech / Events)     - Select mock PCCOE student account
+  - View Campus Map spots & amenities                 - User State set: Logged In (Token/Session)
+       │                                                       │
+       ├───────────────────────────────────────────────────────┘
+       ▼
+[Active Module Navigation]
+ ├── TAB 1: [Home Feed]
+ │    ├── Filter posts by Tag (Announcements, Hackathons, Queries, Clubs)
+ │    ├── Interactive: Like/Upvote (+1 count animated)
+ │    ├── Interactive: Open Comment Drawer & submit quick reply
+ │    └── Trigger: "Create Post" modal with image preview and tags
+ │
+ ├── TAB 2: [Connect]
+ │    ├── Student Directory (Computer, IT, ENTC, AI&DS, Mech)
+ │    ├── Search by skills (e.g., 'React', 'Cybersecurity', 'ML', 'UI/UX')
+ │    └── Interactive: "Send Connect Ping" -> triggers instant Toast alert
+ │
+ ├── TAB 3: [XD Hub - Innovation & Design]
+ │    ├── Showcase student-built PCCOE projects & design portfolios
+ │    ├── Filter by category: Web / AI / Hardware / Design
+ │    └── Interactive: Live Demo link & Upvote counter
+ │
+ └── TAB 4: [Campus Maps]
+      ├── Interactive 2D Schematic / Interactive grid map of PCCOE Campus
+      ├── Spot Categories: (Canteen, CS/IT Labs, Central Library, Reading Hall, Workshop)
+      └── Click spot -> Details drawer (floor, open hours, amenities)
+
+================================================================================
+2. REAL-TIME EVENT & STATE DATA FLOW
+================================================================================
+
+ [User Action (e.g., Like, Connect, Post)]
+                    │
+                    ▼
+     [React State & Action Dispatcher]
+                    │
+       ┌────────────┴────────────┐
+       ▼                         ▼
+ [Local State Update]      [Global Toast Notification]
+ (Instant UI re-render,    ("Post upvoted!",
+  optimistic update)        "Connection request sent to Tanmay")

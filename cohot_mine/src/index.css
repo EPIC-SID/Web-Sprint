@@ -154,15 +154,6 @@
   text-transform: uppercase;
 }
 
-@keyframes textLoop {
-  0% {
-    start-offset: 0px;
-  }
-  100% {
-    start-offset: -2000px;
-  }
-}
-
 /* Grow Animation for Live Analytics Bars */
 @keyframes grow {
   from {

@@ -1,169 +1,108 @@
-import React, { useState, useCallback } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/layout/Navbar';
-import { HeroSection } from './components/hero/HeroSection';
-import { MarqueeBanner } from './components/hero/MarqueeBanner';
-import { FeedView } from './components/modules/HomeFeed/FeedView';
-import { ConnectView } from './components/modules/Connect/ConnectView';
-import { XDView } from './components/modules/XDHub/XDView';
-import { CampusMapView } from './components/modules/CampusMaps/CampusMapView';
+import { useState, useCallback, useEffect } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { LandingNavbar } from './components/landing/LandingNavbar';
+import { HeroSection } from './components/landing/HeroSection';
+import { CommunityMarquee } from './components/landing/CommunityMarquee';
+import { CurvedTextBanner } from './components/landing/CurvedTextBanner';
+import { PlatformFeatures } from './components/landing/PlatformFeatures';
+import { AboutSection } from './components/landing/AboutSection';
+import { LandingFooter } from './components/landing/LandingFooter';
+import { SpiderManOverlay } from './components/landing/SpiderManOverlay';
 import { GoogleAuthModal } from './components/auth/GoogleAuthModal';
-import { Toast, ToastMessage } from './components/ui/Toast';
-import { MOCK_POSTS, MOCK_XD_PROJECTS } from './data/mockData';
-import { Post, XDProject } from './types';
+import { Toast } from './components/ui/Toast';
+import type { ToastMessage } from './components/ui/Toast';
+import { useAuth } from './context/AuthContext';
 import './index.css';
 
-// ── Inner app with access to auth context ──────────────────────────────────
-function CohortApp() {
-  const { isAuthenticated, user } = useAuth();
-
-  // Tab routing
-  const [activeTab, setActiveTab] = useState<'feed' | 'connect' | 'xd' | 'maps'>('feed');
-
-  // Feed state
-  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
-
-  // XD Projects state
-  const [xdProjects, setXdProjects] = useState<XDProject[]>(MOCK_XD_PROJECTS);
-
-  // Toast system
+function CohortLandingApp() {
+  const { openAuthModal } = useAuth();
+  const [darkMode, setDarkMode] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts((prev) => [...prev.slice(-2), { id, message, type }]);
-  }, []);
+  // Apply dark mode class to root HTML
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  }, [darkMode]);
+
+  const addToast = useCallback(
+    (message: string, type: ToastMessage['type'] = 'info') => {
+      const id = Math.random().toString(36).slice(2);
+      setToasts((prev) => [...prev.slice(-2), { id, message, type }]);
+    },
+    []
+  );
+
+  const handleSignIn = () => {
+    openAuthModal();
+    addToast('Opening Google Sign-In for @pccoepune.org...', 'info');
+  };
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Feed interactions
-  const handleToggleLike = (postId: string) => {
-    if (!isAuthenticated) {
-      addToast('Sign in with your PCCOE Google account to like posts', 'info');
-      return;
+  const scrollToFeatures = () => {
+    const el = document.getElementById('features');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
     }
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, isLiked: !p.isLiked, likesCount: p.isLiked ? p.likesCount - 1 : p.likesCount + 1 }
-          : p
-      )
-    );
   };
-
-  const handleAddComment = (postId: string, commentText: string) => {
-    if (!commentText.trim()) return;
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
-      )
-    );
-    addToast('Reply posted successfully!', 'success');
-  };
-
-  // XD upvote
-  const handleToggleUpvote = (projectId: string) => {
-    if (!isAuthenticated) {
-      addToast('Sign in to upvote student projects', 'info');
-      return;
-    }
-    setXdProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId
-          ? { ...p, hasUpvoted: !p.hasUpvoted, upvotes: p.hasUpvoted ? p.upvotes - 1 : p.upvotes + 1 }
-          : p
-      )
-    );
-  };
-
-  // Show hero + marquee only on feed tab and when not scrolled past
-  const showLanding = activeTab === 'feed';
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-white font-sans">
-      {/* Sticky Navbar */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={(tab) => setActiveTab(tab as typeof activeTab)}
-        onOpenCreatePost={isAuthenticated ? () => addToast('Create post coming soon!', 'info') : undefined}
+    <div className="landing-theme min-h-screen bg-background text-foreground font-body font-inter selection:bg-primary selection:text-primary-foreground transition-colors duration-300 relative">
+      {/* Floating Spider-Man Illustration Doodles */}
+      <SpiderManOverlay />
+
+      {/* Sticky Navigation Bar */}
+      <LandingNavbar
+        darkMode={darkMode}
+        onToggleTheme={() => setDarkMode(!darkMode)}
+        onSignIn={handleSignIn}
       />
 
-      {/* Landing Hero (only on Home Feed) */}
-      {showLanding && (
-        <>
-          <HeroSection
-            onExploreConnect={() => setActiveTab('connect')}
-            onExploreXD={() => setActiveTab('xd')}
-          />
-          <MarqueeBanner onSelectClub={(name) => addToast(`Viewing ${name}`, 'info')} />
-        </>
-      )}
+      {/* Main Content Sections */}
+      <main className="relative z-10">
+        {/* 1. Hero Section */}
+        <HeroSection
+          onGetStarted={handleSignIn}
+          onExplore={scrollToFeatures}
+        />
 
-      {/* Main Module Tabs */}
-      <main className="w-full">
-        {activeTab === 'feed' && (
-          <FeedView
-            posts={posts}
-            onToggleLike={handleToggleLike}
-            onAddComment={handleAddComment}
-            onOpenCreateModal={() =>
-              isAuthenticated
-                ? addToast('Create post modal coming soon!', 'info')
-                : addToast('Sign in first to create a post', 'info')
-            }
-          />
-        )}
+        {/* 2. Connecting Communities Marquee Strip */}
+        <CommunityMarquee />
 
-        {activeTab === 'connect' && (
-          <ConnectView onNotify={(msg) => addToast(msg, 'success')} />
-        )}
+        {/* 3. Curved Loop SVG Banner */}
+        <CurvedTextBanner />
 
-        {activeTab === 'xd' && (
-          <XDView
-            projects={xdProjects}
-            onToggleUpvote={handleToggleUpvote}
-            onOpenSubmitModal={() => addToast('Project submission portal coming soon!', 'info')}
-          />
-        )}
+        {/* 4. Explore Platform Features (8-Grid) */}
+        <PlatformFeatures />
 
-        {activeTab === 'maps' && <CampusMapView />}
+        {/* 5. About Cohort PCCOE */}
+        <AboutSection />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.06] mt-16 py-10 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center text-white font-black text-xs">
-              C
-            </div>
-            <span className="font-semibold text-zinc-400">Cohort PCCOE</span>
-            <span>•</span>
-            <span>Official Student Platform</span>
-          </div>
-          <div className="flex items-center gap-4 text-zinc-600">
-            <span>Built with ❤️ at PCCOE Hackathon 2026</span>
-            <span>•</span>
-            <span>React 19 + Vite + Tailwind</span>
-          </div>
-        </div>
-      </footer>
+      {/* 6. Landing Footer */}
+      <LandingFooter onSignIn={openAuthModal} />
 
-      {/* Modals & Overlays */}
+      {/* Interactive Google Sign-In Simulation Modal */}
       <GoogleAuthModal />
 
-      {/* Toast Notification System */}
+      {/* Notification Toast System */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
 
-// ── Root wrapper with AuthProvider ─────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>
-      <CohortApp />
+      <CohortLandingApp />
     </AuthProvider>
   );
 }
